@@ -163,6 +163,10 @@ class DatabaseManager:
             self.logger.error(f"Failed to get conversation messages: {e}")
             return []
 
+    async def get_conversation_history(self, conversation_id: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get conversation history (alias for get_conversation_messages for backward compatibility)"""
+        return await self.get_conversation_messages(conversation_id, limit)
+
     # ==========================================
     # ANALYTICS OPERATIONS
     # ==========================================

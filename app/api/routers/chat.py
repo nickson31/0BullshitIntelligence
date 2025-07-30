@@ -19,6 +19,7 @@ from app.ai_systems.judge_system import judge_system
 from app.ai_systems.anti_spam import anti_spam_system
 from app.ai_systems.language_detection import language_detection_system
 from app.ai_systems.librarian import librarian_bot
+from app.database import database_manager
 import google.generativeai as genai
 
 router = APIRouter()
@@ -115,6 +116,28 @@ async def send_message(
         user_context.session_data['project_data'] = librarian_result['project_data']
         user_context.session_data['completeness_score'] = librarian_result['completeness_score']
         
+        # 6. Save messages to database for conversation continuity
+        try:
+            # Save user message
+            await database_manager.save_message(
+                conversation_id=conversation_id,
+                role="user",
+                content=message.content,
+                metadata={"intent": judge_decision.detected_intent}
+            )
+            
+            # Save assistant response
+            await database_manager.save_message(
+                conversation_id=conversation_id,
+                role="assistant", 
+                content=ai_response,
+                metadata={"completeness_score": librarian_result['completeness_score']}
+            )
+            
+            logger.info("Messages saved to database", conversation_id=conversation_id)
+        except Exception as e:
+            logger.error("Failed to save messages to database", error=str(e))
+        
         logger.info("Chat message processed successfully",
                    session_id=user_context.user_id,
                    conversation_id=conversation_id,
@@ -149,6 +172,18 @@ async def generate_ai_response(
     """Generate AI response using Gemini"""
     
     try:
+        # Get conversation history for context
+        conversation_history = ""
+        try:
+            messages = await database_manager.get_conversation_history(conversation_id, limit=10)
+            if messages:
+                conversation_history = "\n\nConversación previa:\n"
+                for msg in messages[-6:]:  # Last 6 messages for context
+                    role = "Usuario" if msg['role'] == 'user' else "Asistente"
+                    conversation_history += f"{role}: {msg['content'][:200]}...\n"
+        except Exception as e:
+            logger.warning(f"Could not retrieve conversation history: {e}")
+        
         # Build context-aware prompt
         context_info = ""
         project_data = user_context.session_data.get('project_data')
@@ -166,7 +201,7 @@ Context about user's project:
             prompt = f"""You are a Y-Combinator mentor helping entrepreneurs find investors.
 
 User message: "{user_message}"
-{context_info}
+{context_info}{conversation_history}
 
 The user wants to find investors. Provide specific, actionable advice about:
 1. What stage they should be at for investor search
@@ -174,13 +209,14 @@ The user wants to find investors. Provide specific, actionable advice about:
 3. Types of investors to target based on their business
 4. How to approach investors effectively
 
+IMPORTANT: Use the conversation history to maintain context and avoid repeating information. Reference previous discussions naturally.
 Be direct, practical, and encouraging. Respond in Spanish if the user wrote in Spanish.
 """
         elif judge_decision.detected_intent == "search_companies":
             prompt = f"""You are a business mentor helping entrepreneurs find B2B services and partners.
 
 User message: "{user_message}"
-{context_info}
+{context_info}{conversation_history}
 
 The user is looking for companies/services. Help them:
 1. Identify what type of service they really need
@@ -188,19 +224,22 @@ The user is looking for companies/services. Help them:
 3. Questions to ask potential partners
 4. Red flags to avoid
 
+IMPORTANT: Use the conversation history to maintain context and avoid repeating information. Reference previous discussions naturally.
 Be practical and specific. Respond in Spanish if the user wrote in Spanish.
 """
         else:
             prompt = f"""You are a brilliant Y-Combinator mentor with deep startup experience.
 
 User message: "{user_message}"
-{context_info}
+{context_info}{conversation_history}
 
 Provide expert startup advice that is:
 - Direct and actionable
 - Based on real experience
 - Focused on execution over theory
 - Encouraging but realistic
+
+IMPORTANT: Use the conversation history to maintain context and continuity. Remember what we've discussed about their business (EcoDelivery, sustainable food delivery, etc.) and build upon previous conversations naturally. Don't ask for information you already have.
 
 If they mention their business, ask insightful follow-up questions to understand their needs better.
 Respond in Spanish if the user wrote in Spanish, English if they wrote in English.
@@ -225,10 +264,12 @@ async def get_conversation_history(
     try:
         user_context = get_session_context(session_id)
         
-        # For now, return empty history - would integrate with database
+        # Get actual conversation history from database
+        messages = await database_manager.get_conversation_history(conversation_id, limit=50)
+        
         return {
             "conversation_id": conversation_id,
-            "messages": [],
+            "messages": messages,
             "project_data": user_context.session_data.get('project_data', {}),
             "completeness_score": user_context.session_data.get('completeness_score', 0.0)
         }
