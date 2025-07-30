@@ -22,6 +22,8 @@ __all__ = [
     "ChatResponse",
     "ChatConversation",
     "ConversationContext",
+    "ConversationCreate",
+    "ConversationResponse",
     
     # Search models
     "SearchRequest",
@@ -29,6 +31,10 @@ __all__ = [
     "InvestorResult",
     "CompanyResult",
     "SearchFilters",
+    "InvestorSearchRequest",
+    "CompanySearchRequest", 
+    "InvestorSearchResponse",
+    "CompanySearchResponse",
     
     # User models
     "UserProfile",

@@ -1,13 +1,10 @@
 """
-Judge System - User intent analysis and action routing.
+AI Systems for 0BullshitIntelligence
 """
 
-from .judge_system import JudgeSystem
-from .decision_engine import DecisionEngine
-from .context_analyzer import ContextAnalyzer
+from .coordinator import AICoordinator
 
-__all__ = [
-    "JudgeSystem",
-    "DecisionEngine", 
-    "ContextAnalyzer"
-]
+# Create singleton instance
+ai_coordinator = AICoordinator()
+
+__all__ = ["ai_coordinator", "AICoordinator"]

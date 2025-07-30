@@ -49,13 +49,19 @@ class UserProfile(BaseModel, UUIDMixin, TimestampMixin):
 
 class UserContext(BaseModel):
     """Lightweight user context for AI systems"""
-    user_id: UUID
-    plan: PlanType
-    language_preference: Optional[str] = None
-    credits_remaining: int
-    daily_credits_used: int
-    onboarding_completed: bool
+    user_id: str  # Changed to str for compatibility
+    email: Optional[str] = None
+    plan: str = "free"  # "free", "pro", "outreach"
+    language: str = "spanish"  # "spanish", "english"
+    credits: int = 0
+    daily_credits_used: int = 0
+    onboarding_completed: bool = False
     onboarding_stage: Optional[str] = None
+    projects: List[str] = Field(default_factory=list)
+    
+    # Subscription info
+    subscription_expires: Optional[str] = None
+    features: List[str] = Field(default_factory=list)
     
     # Recent activity
     recent_searches: int = 0

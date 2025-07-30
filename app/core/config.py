@@ -5,7 +5,22 @@ Manages environment variables, database connections, and AI configurations.
 
 import os
 from typing import Optional, List
-from pydantic import BaseSettings, validator
+try:
+    from pydantic import BaseSettings, validator
+except ImportError:
+    # Fallback for when pydantic is not available
+    class BaseSettings:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+        
+        class Config:
+            env_file = ".env"
+    
+    def validator(field):
+        def decorator(func):
+            return func
+        return decorator
 from functools import lru_cache
 
 

@@ -51,6 +51,40 @@ class SearchRequest(BaseModel):
     include_metadata: bool = True
 
 
+class InvestorSearchRequest(BaseModel):
+    """Request for investor search"""
+    keywords: Optional[List[str]] = None
+    stage_keywords: Optional[List[str]] = None
+    categories: Optional[List[str]] = None
+    project_id: Optional[UUID] = None
+    limit: Optional[int] = 15
+    min_angel_score: Optional[float] = 40.0
+    min_employee_score: Optional[float] = 5.9
+
+
+class CompanySearchRequest(BaseModel):
+    """Request for company search"""
+    service_keywords: Optional[List[str]] = None
+    service_type: Optional[str] = None
+    location_preference: Optional[str] = None
+    project_id: Optional[UUID] = None
+    limit: Optional[int] = 10
+
+
+class InvestorSearchResponse(BaseModel):
+    """Response for investor search"""
+    success: bool = True
+    message: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+
+
+class CompanySearchResponse(BaseModel):
+    """Response for company search"""
+    success: bool = True
+    message: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+
+
 # ==========================================
 # SEARCH RESULT MODELS
 # ==========================================

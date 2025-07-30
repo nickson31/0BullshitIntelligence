@@ -55,6 +55,30 @@ class ChatMessageRequest(BaseModel):
     include_welcome: bool = True
 
 
+class ConversationCreate(BaseModel):
+    """Request to create a new conversation"""
+    title: Optional[str] = None
+    project_id: Optional[UUID] = None
+    
+
+class ConversationResponse(BaseModel):
+    """Response for conversation operations"""
+    success: bool = True
+    message: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+
+
+class ChatResponse(BaseModel):
+    """Response from chat processing"""
+    success: bool = True
+    message: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+    ai_response: Optional[str] = None
+    search_results: Optional[Dict[str, Any]] = None
+    upsell_message: Optional[str] = None
+    processing_time_ms: Optional[float] = None
+
+
 # ==========================================
 # CONVERSATION MODELS
 # ==========================================
