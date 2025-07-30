@@ -28,13 +28,13 @@ class DatabaseManager:
         self.tables = {
             "angel_investors": "angel_investors",
             "investment_funds": "investment_funds", 
-            "employee_funds": "employee_funds",
+            "fund_employees": "fund_employees",
             "companies": "companies",
             "conversations": "conversations",
             "messages": "messages",
             "search_results": "search_results",
-            "user_projects": "user_projects",
-            "project_memory": "project_memory"
+            "projects": "projects",
+            "users": "users"
         }
     
     async def initialize(self):
