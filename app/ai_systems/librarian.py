@@ -271,19 +271,20 @@ Respond in this exact JSON format (only include fields with actual values):
         if 'stage' in extracted:
             current.stage = extracted['stage']
         
-                # Metrics - store as dict in extracted_data
+                # Ensure extracted_data is initialized
+        if not hasattr(current, 'extracted_data') or current.extracted_data is None:
+            current.extracted_data = {}
+        
+        # Metrics - store as dict in extracted_data
         if 'metrics' in extracted:
-            current.extracted_data = current.extracted_data or {}
             current.extracted_data['metrics'] = extracted['metrics']
         
         # Team info - store as dict in extracted_data
         if 'team_info' in extracted:
-            current.extracted_data = current.extracted_data or {}
             current.extracted_data['team_info'] = extracted['team_info']
         
         # Funding info - store as dict in extracted_data  
         if 'funding_info' in extracted:
-            current.extracted_data = current.extracted_data or {}
             current.extracted_data['funding_info'] = extracted['funding_info']
         
         return current
@@ -321,7 +322,8 @@ Respond in this exact JSON format (only include fields with actual values):
                 completed_weight += weight
         
         # Metrics (20% weight) - check in extracted_data
-        metrics_data = project_data.extracted_data.get('metrics') if project_data.extracted_data else None
+        extracted_data = getattr(project_data, 'extracted_data', None) or {}
+        metrics_data = extracted_data.get('metrics')
         if metrics_data:
             metrics_fields = ['revenue', 'users', 'growth_rate']
             completed_metrics = sum(
@@ -334,7 +336,7 @@ Respond in this exact JSON format (only include fields with actual values):
             total_weight += 20
         
         # Team info (10% weight) - check in extracted_data
-        team_data = project_data.extracted_data.get('team_info') if project_data.extracted_data else None
+        team_data = extracted_data.get('team_info')
         if team_data:
             team_fields = ['size', 'founders']
             completed_team = sum(
@@ -347,7 +349,7 @@ Respond in this exact JSON format (only include fields with actual values):
             total_weight += 10
         
         # Funding info (10% weight) - check in extracted_data
-        funding_data = project_data.extracted_data.get('funding_info') if project_data.extracted_data else None
+        funding_data = extracted_data.get('funding_info')
         if funding_data:
             total_weight += 10
             completed_weight += 10

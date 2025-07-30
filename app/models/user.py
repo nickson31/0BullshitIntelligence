@@ -226,7 +226,10 @@ class ProjectData(BaseModel):
     categories: List[str] = []
     stage: Optional[str] = None
     problem_solved: Optional[str] = None
+    solution: Optional[str] = None  # Added missing field
+    target_market: Optional[str] = None  # Added missing field
     business_model: Optional[str] = None
+    extracted_data: dict = {}  # Added missing field for storing additional data
     
     class Config:
         model_config = {"from_attributes": True}
