@@ -48,9 +48,9 @@ class Settings(BaseSettings):
     # DATABASE CONFIGURATION
     # ==========================================
     
-    # Supabase configuration
+    # Supabase configuration - match Render's variable names
     supabase_url: str = Field(env="SUPABASE_URL")
-    supabase_key: str = Field(env="SUPABASE_KEY")
+    supabase_key: str = Field(env="SUPABASE_ANON_KEY")  # Render uses SUPABASE_ANON_KEY
     supabase_service_key: Optional[str] = Field(default=None, env="SUPABASE_SERVICE_KEY")
     
     @field_validator("supabase_url")
@@ -64,7 +64,7 @@ class Settings(BaseSettings):
     @classmethod
     def validate_supabase_key(cls, v):
         if not v:
-            raise ValueError("Supabase KEY is required - set SUPABASE_KEY environment variable")
+            raise ValueError("Supabase KEY is required - set SUPABASE_ANON_KEY environment variable")
         return v
     
     # ==========================================
@@ -130,7 +130,7 @@ def get_settings() -> Settings:
         print(f"❌ Configuration error: {e}")
         print("📋 Required environment variables:")
         print("   - SUPABASE_URL")
-        print("   - SUPABASE_KEY") 
+        print("   - SUPABASE_ANON_KEY (or SUPABASE_KEY)") 
         print("   - GEMINI_API_KEY")
         print(f"🔍 Current environment variables: {list(os.environ.keys())}")
         raise
