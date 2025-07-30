@@ -5,19 +5,19 @@ User and project models for 0BullshitIntelligence microservice.
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from uuid import UUID
-from pydantic import Field, validator, EmailStr
+from pydantic import Field, field_validator
 
-from .base import BaseModel, TimestampMixin, UUIDMixin, PlanType, ProjectStage, ProjectCategory
+from .base import BaseModel, PlanType, ProjectStage, ProjectCategory
 
 
 # ==========================================
 # USER MODELS
 # ==========================================
 
-class UserProfile(BaseModel, UUIDMixin, TimestampMixin):
+class UserProfile(BaseModel):
     """User profile information"""
     # Basic information
-    email: EmailStr
+    email: str  # Changed from EmailStr to str - CTO handles email validation
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
     
@@ -45,6 +45,10 @@ class UserProfile(BaseModel, UUIDMixin, TimestampMixin):
     total_conversations: int = 0
     total_searches: int = 0
     total_projects: int = 0
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
 
 
 class UserContext(BaseModel):
@@ -164,7 +168,7 @@ class ProjectData(BaseModel):
     additional_fields: Dict[str, Any] = Field(default_factory=dict)
 
 
-class Project(BaseModel, UUIDMixin, TimestampMixin):
+class Project(BaseModel):
     """Project model"""
     # Basic information
     user_id: UUID
@@ -192,8 +196,13 @@ class Project(BaseModel, UUIDMixin, TimestampMixin):
     # Status
     active: bool = True
     archived: bool = False
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
 
-    @validator('completeness_score', pre=True, always=True)
+    @field_validator('completeness_score')
+    @classmethod
     def validate_completeness_score(cls, v):
         """Ensure completeness score is within valid range"""
         if v is None:
@@ -261,7 +270,7 @@ class CompletenessResponse(BaseModel):
 # SYNCHRONIZATION MODELS
 # ==========================================
 
-class SyncOperation(BaseModel, UUIDMixin, TimestampMixin):
+class SyncOperation(BaseModel):
     """Database synchronization operation"""
     operation_type: str  # "create", "update", "delete"
     table_name: str
@@ -276,6 +285,10 @@ class SyncOperation(BaseModel, UUIDMixin, TimestampMixin):
     # Direction
     source: str  # "intelligence", "main"
     target: str  # "main", "intelligence"
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
 
 
 class UserSync(BaseModel):
