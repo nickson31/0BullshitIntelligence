@@ -95,7 +95,7 @@ class JudgeSystem:
         message_count = conv_state.get('message_count', 0)
         has_business_context = conv_state.get('has_business_context', False)
         
-        return f"""Analyze this user message and determine the most appropriate response strategy.
+        return f"""Analyze this user message and determine ALL appropriate actions (can be multiple).
 
 User message: "{user_input}"
 
@@ -104,7 +104,7 @@ Conversation context:
 - Has business context: {has_business_context}
 - Previous intent: {conv_state.get('last_intent', 'none')}
 
-Intent categories:
+Primary intent categories:
 1. "simple_greeting" - Basic greetings like "hi", "hello", "hola" without business context
 2. "casual_chat" - Casual conversation, small talk, general questions  
 3. "business_question" - Specific business/startup questions or problems
@@ -112,19 +112,27 @@ Intent categories:
 5. "search_companies" - Looking for service providers, partners, vendors
 6. "personal_intro" - User introducing themselves or their business
 
+MULTIPLE ACTIONS CAPABILITY:
+The judge can decide to do MULTIPLE things simultaneously:
+- If user asks for investors AND we have <50% completeness: search_investors + ask_questions
+- If user asks for companies: search_companies + ask_questions (for better future results)
+- If user has business question: answer + ask_questions (to build project data)
+
 Guidelines:
 - First messages that are just greetings should be "simple_greeting"
-- Only classify as "business_question" if there's a clear business problem or startup topic
-- Don't assume business intent from simple greetings
-- Consider conversation flow and previous context
+- If user explicitly asks for investor/company search, set those flags even if completeness is low
+- Always consider asking questions to improve project completeness
+- Multiple actions are encouraged when appropriate
 
 Respond with:
-INTENT: [intent_category]
+PRIMARY_INTENT: [main intent category]
 CONFIDENCE: [0.0-1.0]
 REASONING: [brief explanation]
-ASK_QUESTIONS: [true/false] - whether to ask follow-up questions
-SHOULD_SEARCH: [true/false] - whether this needs search functionality
-SHOULD_UPSELL: [true/false] - whether to mention premium features"""
+ASK_QUESTIONS: [true/false] - whether to ask follow-up questions about their project
+SHOULD_SEARCH_INVESTORS: [true/false] - whether to search for investors
+SHOULD_SEARCH_COMPANIES: [true/false] - whether to search for companies
+SHOULD_UPSELL: [true/false] - whether to mention premium features
+MULTIPLE_ACTIONS: [true/false] - whether this requires multiple simultaneous actions"""
 
     async def _call_gemini(self, prompt: str) -> str:
         """Call Gemini API for analysis"""
@@ -145,13 +153,15 @@ SHOULD_UPSELL: [true/false] - whether to mention premium features"""
             confidence = 0.7
             reasoning = "Default reasoning"
             ask_questions = True
-            should_search = False
+            should_search_investors = False
+            should_search_companies = False
             should_upsell = False
+            multiple_actions = False
             
             # Parse each line
             for line in lines:
                 line = line.strip()
-                if line.startswith('INTENT:'):
+                if line.startswith('PRIMARY_INTENT:') or line.startswith('INTENT:'):
                     intent = line.split(':', 1)[1].strip()
                 elif line.startswith('CONFIDENCE:'):
                     try:
@@ -162,20 +172,40 @@ SHOULD_UPSELL: [true/false] - whether to mention premium features"""
                     reasoning = line.split(':', 1)[1].strip()
                 elif line.startswith('ASK_QUESTIONS:'):
                     ask_questions = line.split(':', 1)[1].strip().lower() == 'true'
-                elif line.startswith('SHOULD_SEARCH:'):
+                elif line.startswith('SHOULD_SEARCH_INVESTORS:'):
+                    should_search_investors = line.split(':', 1)[1].strip().lower() == 'true'
+                elif line.startswith('SHOULD_SEARCH_COMPANIES:'):
+                    should_search_companies = line.split(':', 1)[1].strip().lower() == 'true'
+                elif line.startswith('SHOULD_SEARCH:'):  # Backward compatibility
                     should_search = line.split(':', 1)[1].strip().lower() == 'true'
+                    if intent == "search_investors":
+                        should_search_investors = should_search
+                    elif intent == "search_companies":
+                        should_search_companies = should_search
                 elif line.startswith('SHOULD_UPSELL:'):
                     should_upsell = line.split(':', 1)[1].strip().lower() == 'true'
+                elif line.startswith('MULTIPLE_ACTIONS:'):
+                    multiple_actions = line.split(':', 1)[1].strip().lower() == 'true'
+            
+            # Legacy support: if intent is search_investors/companies, set the appropriate flags
+            if intent == "search_investors":
+                should_search_investors = True
+            elif intent == "search_companies":
+                should_search_companies = True
             
             return JudgeDecision(
                 conversation_id=conversation_id,
                 user_input=user_input,
                 detected_intent=intent,
                 confidence_score=confidence,
-                should_search=should_search,
+                should_search=should_search_investors or should_search_companies,  # Legacy field
                 should_ask_questions=ask_questions,
                 should_upsell=should_upsell,
-                reasoning=reasoning
+                reasoning=reasoning,
+                # New fields for multiple actions
+                should_search_investors=should_search_investors,
+                should_search_companies=should_search_companies,
+                multiple_actions=multiple_actions
             )
             
         except Exception as e:
@@ -188,7 +218,10 @@ SHOULD_UPSELL: [true/false] - whether to mention premium features"""
                 should_search=False,
                 should_ask_questions=True,
                 should_upsell=False,
-                reasoning="Parsing error"
+                reasoning="Parsing error",
+                should_search_investors=False,
+                should_search_companies=False,
+                multiple_actions=False
             )
 
 

@@ -270,12 +270,62 @@ class WebSocketManager:
                 judge_decision = await judge_system.analyze_message(
                     content, conversation_id, session_data
                 )
-                logger.info("Judge system analysis complete", intent=judge_decision.detected_intent)
+                logger.info("Judge system analysis complete", 
+                           intent=judge_decision.detected_intent,
+                           should_search_investors=judge_decision.should_search_investors,
+                           should_search_companies=judge_decision.should_search_companies,
+                           multiple_actions=judge_decision.multiple_actions)
                 
-                # 4. Generate response with Gemini
+                # 4. Execute searches if needed (MULTIPLE ACTIONS SUPPORT)
+                search_results = {}
+                
+                # Get current project data for search eligibility
+                current_project_data = session_data.get('project_data', {})
+                
+                # Search investors if requested
+                if judge_decision.should_search_investors:
+                    try:
+                        from app.ai_systems.search_investors import investor_search_system
+                        
+                        # Check if eligible for investor search (50% completeness)
+                        can_search, search_message = await investor_search_system.can_search_investors(current_project_data)
+                        
+                        if can_search:
+                            logger.info("Starting investor search")
+                            investor_results = await investor_search_system.search_investors(
+                                content, current_project_data, conversation_id
+                            )
+                            search_results['investors'] = investor_results
+                            logger.info("Investor search completed", total_results=len(investor_results.get('results', [])))
+                        else:
+                            search_results['investors'] = {
+                                'error': search_message,
+                                'can_search': False
+                            }
+                            logger.info("Investor search not eligible", reason=search_message)
+                    except Exception as e:
+                        logger.error("Investor search failed", error=str(e))
+                        search_results['investors'] = {'error': 'Search failed'}
+                
+                # Search companies if requested  
+                if judge_decision.should_search_companies:
+                    try:
+                        from app.ai_systems.search_companies import company_search_system
+                        
+                        logger.info("Starting company search")
+                        company_results = await company_search_system.search_companies(
+                            content, current_project_data, conversation_id
+                        )
+                        search_results['companies'] = company_results
+                        logger.info("Company search completed", total_results=len(company_results.get('results', [])))
+                    except Exception as e:
+                        logger.error("Company search failed", error=str(e))
+                        search_results['companies'] = {'error': 'Search failed'}
+                
+                # 5. Generate response with Gemini (including search results)
                 logger.info("Starting AI response generation")
                 ai_response = await self._generate_ai_response(
-                    content, conversation_id, session_data, judge_decision
+                    content, conversation_id, session_data, judge_decision, search_results
                 )
                 logger.info("AI response generated", response_length=len(ai_response))
                 
@@ -298,8 +348,12 @@ class WebSocketManager:
                         "language": language_detection.detected_language,
                         "confidence": judge_decision.confidence_score,
                         "completeness_score": librarian_result['completeness_score'],
-                        "extracted_fields": librarian_result['extracted_fields']
-                    }
+                        "extracted_fields": librarian_result['extracted_fields'],
+                        "multiple_actions": judge_decision.multiple_actions,
+                        "searched_investors": judge_decision.should_search_investors,
+                        "searched_companies": judge_decision.should_search_companies
+                    },
+                    "search_results": search_results if search_results else None
                 })
                 
                 logger.info("Chat message processed successfully",
@@ -324,7 +378,8 @@ class WebSocketManager:
                 logger.error("Failed to send error message", error=str(send_error))
     
     async def _generate_ai_response(self, user_message: str, conversation_id: str, 
-                                  session_data: Dict[str, Any], judge_decision: Any) -> str:
+                                  session_data: Dict[str, Any], judge_decision: Any, 
+                                  search_results: Dict[str, Any] = None) -> str:
         """Generate AI response using Gemini based on detected intent"""
         try:
             from app.core.config import get_settings
@@ -352,6 +407,29 @@ User's project context:
 - Problem: {project_data.get('problem_solved', '')}
 - Business model: {project_data.get('business_model', '')}
 """
+
+            # Include search results in context if available
+            search_context = ""
+            if search_results:
+                search_context = "\n\nSEARCH RESULTS:\n"
+                
+                if 'investors' in search_results:
+                    investor_data = search_results['investors']
+                    if 'error' in investor_data:
+                        search_context += f"- Investor search: {investor_data['error']}\n"
+                    else:
+                        results_count = len(investor_data.get('results', []))
+                        search_context += f"- Found {results_count} potential investors (angels + funds)\n"
+                        search_context += f"- Keywords used: {', '.join(investor_data.get('keywords_used', []))}\n"
+                
+                if 'companies' in search_results:
+                    company_data = search_results['companies']
+                    if 'error' in company_data:
+                        search_context += f"- Company search: {company_data['error']}\n"
+                    else:
+                        results_count = len(company_data.get('results', []))
+                        search_context += f"- Found {results_count} relevant service providers\n"
+                        search_context += f"- Keywords used: {', '.join(company_data.get('keywords_used', []))}\n"
             
             # Create appropriate prompt based on intent
             if intent == "simple_greeting":
@@ -421,10 +499,11 @@ Instructions:
                 prompt = f"""You are a Y Combinator partner providing startup advice. Be direct, practical, and helpful like Paul Graham or Jessica Livingston.
 
 User: "{user_message}"
-{context_info}
+{context_info}{search_context}
 
 Instructions:
 - Answer their question with specific, actionable advice
+- If search results are included, reference them in your answer
 - Use Y Combinator's philosophy: focus on users, build something people want
 - Be direct and honest - no bullshit, no fluff
 - Ask clarifying questions only if needed to give better advice
@@ -438,27 +517,32 @@ Instructions:
                 prompt = f"""You are a Y Combinator partner helping a founder find investors. Be direct, helpful, and professional like Paul Graham.
 
 User: "{user_message}"
-{context_info}
+{context_info}{search_context}
 
 Instructions:
+- If search results are provided, acknowledge the found investors and give specific advice
+- If search failed due to low completeness, ask the missing questions to reach 50%
 - Ask specific questions about their stage, traction, and metrics
 - Provide clear, actionable advice about investor preparation
 - Be encouraging but realistic about fundraising
 - Use Y Combinator's direct, no-nonsense communication style
 - Focus on what they need to do NOW to be ready for investors
+- If you found results, suggest next steps for reaching out
 """
                 
             elif intent == "search_companies":
-                prompt = f"""The user needs help finding companies/services:
+                prompt = f"""You are a business mentor helping find the right service providers and partners.
 
 User: "{user_message}"
-{context_info}
+{context_info}{search_context}
 
 Instructions:
-- Understand what type of companies/services they need
-- Ask clarifying questions about their requirements
-- Provide guidance on evaluation criteria
-- Suggest specific approaches for finding the right partners
+- If search results are provided, acknowledge the found companies and give advice on next steps
+- Help them understand what type of companies/services they need
+- Ask clarifying questions about their requirements and budget
+- Provide guidance on how to evaluate potential partners
+- Suggest specific approaches for vetting and contacting companies
+- Be practical about costs and timelines
 """
                 
             else:

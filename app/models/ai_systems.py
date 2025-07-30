@@ -15,17 +15,22 @@ from .base import BaseModel, Language, ProjectStage, ProjectCategory, PlanType
 # ==========================================
 
 class JudgeDecision(BaseModel):
-    """Judge system decision model"""
+    """Judge system decision model with multiple action support"""
     conversation_id: str
     user_input: str = Field(max_length=1000)
     detected_intent: str
     confidence_score: float = Field(ge=0.0, le=1.0)
-    should_search: bool = False
+    should_search: bool = False  # Legacy field - True if any search is needed
     should_ask_questions: bool = False
     should_upsell: bool = False
-    search_type: Optional[str] = None
+    search_type: Optional[str] = None  # Legacy field
     reasoning: str = Field(max_length=2000)
     language_detected: Language = Language.SPANISH
+    
+    # New fields for multiple simultaneous actions
+    should_search_investors: bool = False
+    should_search_companies: bool = False
+    multiple_actions: bool = False
     
     # Timestamp fields
     created_at: datetime = Field(default_factory=datetime.utcnow)
