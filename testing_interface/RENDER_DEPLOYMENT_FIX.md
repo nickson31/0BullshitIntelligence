@@ -1,22 +1,28 @@
 # 🚀 Render Deployment - Problema Solucionado
 
-## 🔍 Problema Identificado
+## 🔍 Problemas Identificados y Resueltos
 
-El error en Render se debía a que `pydantic-core==2.14.5` intentaba compilarse desde el código fuente, requiriendo Rust y acceso de escritura al sistema de archivos.
+### Problema 1: Compilación de Rust (RESUELTO ✅)
+El error inicial se debía a que `pydantic-core==2.14.5` intentaba compilarse desde el código fuente, requiriendo Rust.
+
+### Problema 2: Conflicto de Dependencias (RESUELTO ✅)
+El segundo error fue un conflicto entre:
+- `httpx==0.25.2` (especificado por nosotros)
+- `supabase 2.3.4` que requiere `httpx<0.25.0`
+- `postgrest` que requiere `httpx<0.25.0`
 
 ```
-error: failed to create directory `/usr/local/cargo/registry/cache/index.crates.io-1949cf8c6b5b557f`
-Caused by: Read-only file system (os error 30)
+ERROR: Cannot install -r requirements.txt (line 12), httpx==0.25.2 and supabase because these package versions have conflicting dependencies.
 ```
 
 ## ✅ Soluciones Implementadas
 
 ### 1. **Actualización de Dependencias**
-- ✅ `pydantic` actualizado de `2.5.2` a `2.8.2`
-- ✅ `pydantic-core` especificado como `2.20.1` (tiene wheels precompilados)
-- ✅ `supabase` actualizado a `2.3.4`
-- ✅ `httpx` actualizado a `0.25.2`
-- ✅ `typing-extensions` actualizado a `4.12.2`
+- ✅ `pydantic` actualizado a rango `>=2.8.0,<3.0.0` (con wheels precompilados)
+- ✅ `supabase` actualizado a `>=2.17.0` (versión más reciente)
+- ✅ `httpx` especificado como `>=0.24.0,<0.25.0` (compatible con supabase)
+- ✅ `typing-extensions` actualizado a `>=4.12.0`
+- ✅ Usados rangos de versiones para mejor compatibilidad
 
 ### 2. **Configuración de Build Mejorada**
 - ✅ Agregado `setuptools>=65.0` y `wheel>=0.37.0`
