@@ -6,21 +6,22 @@ Manages environment variables, database connections, and AI configurations.
 import os
 from typing import Optional, List
 try:
-    from pydantic import BaseSettings, validator
+    from pydantic_settings import BaseSettings
+    from pydantic import field_validator
 except ImportError:
-    # Fallback for when pydantic is not available
-    class BaseSettings:
-        def __init__(self, **kwargs):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
+    try:
+        from pydantic import BaseSettings, field_validator
+    except ImportError:
+        # Fallback for when pydantic is not available
+        class BaseSettings:
+            def __init__(self, **kwargs):
+                for key, value in kwargs.items():
+                    setattr(self, key, value)
         
-        class Config:
-            env_file = ".env"
-    
-    def validator(field):
-        def decorator(func):
-            return func
-        return decorator
+        def field_validator(field):
+            def decorator(func):
+                return func
+            return decorator
 from functools import lru_cache
 
 
@@ -49,10 +50,18 @@ class Settings(BaseSettings):
     supabase_key: str
     supabase_service_key: Optional[str] = None
     
-    @validator("supabase_url", "supabase_key")
-    def validate_required_supabase(cls, v):
+    @field_validator("supabase_url")
+    @classmethod
+    def validate_supabase_url(cls, v):
         if not v:
-            raise ValueError("Supabase URL and KEY are required")
+            raise ValueError("Supabase URL is required")
+        return v
+        
+    @field_validator("supabase_key")
+    @classmethod
+    def validate_supabase_key(cls, v):
+        if not v:
+            raise ValueError("Supabase KEY is required")
         return v
     
     # ==========================================
@@ -65,7 +74,8 @@ class Settings(BaseSettings):
     gemini_temperature: float = 0.7
     gemini_max_tokens: int = 3000
     
-    @validator("gemini_api_key")
+    @field_validator("gemini_api_key")
+    @classmethod
     def validate_gemini_key(cls, v):
         if not v:
             raise ValueError("Gemini API key is required")
@@ -101,23 +111,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        
-        # Field aliases for environment variables
-        fields = {
-            "supabase_url": {"env": "SUPABASE_URL"},
-            "supabase_key": {"env": "SUPABASE_KEY"},
-            "supabase_service_key": {"env": "SUPABASE_SERVICE_KEY"},
-            "gemini_api_key": {"env": "GEMINI_API_KEY"},
-            "gemini_model": {"env": "GEMINI_MODEL"},
-            "environment": {"env": "ENVIRONMENT"},
-            "debug": {"env": "DEBUG"},
-            "host": {"env": "HOST"},
-            "port": {"env": "PORT"},
-        }
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False
+    }
 
 
 @lru_cache()
