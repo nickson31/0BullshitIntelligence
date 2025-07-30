@@ -6,6 +6,7 @@ import json
 import asyncio
 from typing import Dict, Set, List, Any, Optional
 from datetime import datetime
+from uuid import uuid4
 
 from fastapi import WebSocket, WebSocketDisconnect
 from app.core.logging import get_logger
@@ -174,6 +175,10 @@ class WebSocketManager:
                 }
                 await self.broadcast_to_conversation(conversation_id, response)
             
+            elif message_type == "chat_message":
+                # Handle chat messages - process through AI systems
+                await self._handle_chat_message(conversation_id, data)
+            
             elif message_type == "search_status":
                 # Handle search status updates (for real-time search progress)
                 await self._handle_search_status(conversation_id, data)
@@ -188,6 +193,182 @@ class WebSocketManager:
         except Exception as e:
             logger.error(f"WebSocket message handling failed: {e}")
     
+    async def _handle_chat_message(self, conversation_id: str, data: Dict[str, Any]):
+        """Handle chat message processing through AI systems"""
+        try:
+            # Import here to avoid circular imports
+            from app.ai_systems.judge_system import judge_system
+            from app.ai_systems.anti_spam import anti_spam_system
+            from app.ai_systems.language_detection import language_detection_system
+            from app.ai_systems.librarian import librarian_bot
+            import google.generativeai as genai
+            from app.core.config import get_settings
+            
+            # Get message content
+            content = data.get("content", "")
+            session_id = data.get("session_id", str(uuid4()))
+            
+            if not content.strip():
+                await self.send_error_message(conversation_id, "Message content is required")
+                return
+            
+            logger.info("Processing chat message", 
+                       conversation_id=conversation_id,
+                       session_id=session_id,
+                       content_length=len(content))
+            
+            # Send typing indicator
+            await self.broadcast_to_conversation(conversation_id, {
+                "type": "ai_typing",
+                "conversation_id": conversation_id,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            
+            # Session context for anonymous users
+            session_data = {"session_id": session_id}
+            
+            # 1. Anti-spam check
+            spam_result = await anti_spam_system.analyze_message(
+                content, conversation_id, session_data
+            )
+            
+            if spam_result.is_spam:
+                # Generate clever anti-spam response
+                spam_response = await anti_spam_system.generate_clever_response(
+                    spam_result, "spanish", session_data
+                )
+                
+                await self.send_ai_response(conversation_id, {
+                    "content": spam_response,
+                    "metadata": {
+                        "spam_detected": True,
+                        "spam_score": spam_result.spam_score
+                    }
+                })
+                return
+            
+            # 2. Language detection
+            language_detection = await language_detection_system.detect_language(
+                content, conversation_id, session_data
+            )
+            
+            # 3. Judge system - determine intent
+            judge_decision = await judge_system.analyze_message(
+                content, conversation_id, session_data
+            )
+            
+            # 4. Generate response with Gemini
+            ai_response = await self._generate_ai_response(
+                content, conversation_id, session_data, judge_decision
+            )
+            
+            # 5. Librarian - extract and store project data
+            librarian_result = await librarian_bot.process_conversation_update(
+                session_id,
+                conversation_id, 
+                content,
+                ai_response,
+                session_data.get('project_data')
+            )
+            
+            # Send AI response
+            await self.send_ai_response(conversation_id, {
+                "content": ai_response,
+                "metadata": {
+                    "intent": judge_decision.detected_intent,
+                    "language": language_detection.detected_language,
+                    "confidence": judge_decision.confidence_score,
+                    "completeness_score": librarian_result['completeness_score'],
+                    "extracted_fields": librarian_result['extracted_fields']
+                }
+            })
+            
+            logger.info("Chat message processed successfully",
+                       conversation_id=conversation_id,
+                       intent=judge_decision.detected_intent,
+                       completeness_score=librarian_result['completeness_score'])
+            
+        except Exception as e:
+            logger.error("Chat message processing failed", error=str(e))
+            await self.send_error_message(conversation_id, 
+                "Lo siento, hubo un problema técnico. ¿Podrías intentar de nuevo?")
+    
+    async def _generate_ai_response(self, user_message: str, conversation_id: str, 
+                                  session_data: Dict[str, Any], judge_decision: Any) -> str:
+        """Generate AI response using Gemini"""
+        try:
+            from app.core.config import get_settings
+            import google.generativeai as genai
+            
+            settings = get_settings()
+            genai.configure(api_key=settings.gemini_api_key)
+            model = genai.GenerativeModel(settings.gemini_model)
+            
+            # Build context-aware prompt
+            context_info = ""
+            project_data = session_data.get('project_data')
+            if project_data:
+                context_info = f"""
+Context about user's project:
+- Categories: {project_data.get('categories', [])}
+- Stage: {project_data.get('stage', 'unknown')}
+- Problem solved: {project_data.get('problem_solved', '')}
+- Business model: {project_data.get('business_model', '')}
+"""
+            
+            # Create intelligent prompt based on intent
+            if judge_decision.detected_intent == "search_investors":
+                prompt = f"""You are a Y-Combinator mentor helping entrepreneurs find investors.
+
+User message: "{user_message}"
+{context_info}
+
+The user wants to find investors. Provide specific, actionable advice about:
+1. What stage they should be at for investor search
+2. What metrics they need to prepare
+3. Types of investors to target based on their business
+4. How to approach investors effectively
+
+Be direct, practical, and encouraging. Respond in Spanish if the user wrote in Spanish.
+"""
+            elif judge_decision.detected_intent == "search_companies":
+                prompt = f"""You are a business mentor helping entrepreneurs find B2B services and partners.
+
+User message: "{user_message}"
+{context_info}
+
+The user is looking for companies/services. Help them:
+1. Identify what type of service they really need
+2. Key criteria to evaluate providers
+3. Questions to ask potential partners
+4. Red flags to avoid
+
+Be practical and specific. Respond in Spanish if the user wrote in Spanish.
+"""
+            else:
+                prompt = f"""You are a brilliant Y-Combinator mentor with deep startup experience.
+
+User message: "{user_message}"
+{context_info}
+
+Provide expert startup advice that is:
+- Direct and actionable
+- Based on real experience
+- Focused on execution over theory
+- Encouraging but realistic
+
+If they mention their business, ask insightful follow-up questions to understand their needs better.
+Respond in Spanish if the user wrote in Spanish, English if they wrote in English.
+"""
+            
+            # Generate response with Gemini
+            response = model.generate_content(prompt)
+            return response.text.strip()
+            
+        except Exception as e:
+            logger.error("AI response generation failed", error=str(e))
+            return "Lo siento, hubo un problema técnico. ¿Podrías intentar de nuevo? / Sorry, there was a technical issue. Could you try again?"
+
     async def send_search_progress(self, conversation_id: str, progress_data: Dict[str, Any]):
         """Send search progress updates to connected clients"""
         message = {
@@ -221,6 +402,17 @@ class WebSocketManager:
         
         await self.broadcast_to_conversation(conversation_id, message)
     
+    async def send_error_message(self, conversation_id: str, error_message: str):
+        """Send error message to connected clients"""
+        message = {
+            "type": "error",
+            "conversation_id": conversation_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "content": error_message
+        }
+        
+        await self.broadcast_to_conversation(conversation_id, message)
+
     async def _send_to_websocket(self, websocket: WebSocket, message: Dict[str, Any]) -> bool:
         """Send message to a single WebSocket connection"""
         try:
