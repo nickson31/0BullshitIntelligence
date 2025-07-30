@@ -35,6 +35,7 @@ git push origin main
    - **Runtime:** `Python 3`
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `python app.py`
+   - **IMPORTANTE:** Render detectará automáticamente Python 3.11.7 del archivo `runtime.txt`
 
 ### **Step 3: Configurar Variables de Entorno**
 
