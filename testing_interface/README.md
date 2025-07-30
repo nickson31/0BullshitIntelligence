@@ -14,6 +14,17 @@ A beautiful, modern testing interface for the 0BullshitIntelligence AI chat syst
 
 ## 🚀 Quick Start
 
+### 🌐 **Option A: Deploy to Render (Recommended for Gemini API)**
+
+**Perfect if Gemini API doesn't work in your region!**
+
+1. **Follow the complete guide:** [`DEPLOY_RENDER.md`](DEPLOY_RENDER.md)
+2. **Deploy to Render** with one click
+3. **Gemini API works perfectly** from Render servers
+4. **Get a public URL** to share with your team
+
+### 💻 **Option B: Local Development**
+
 ### 1. **Install Dependencies**
 
 ```bash
@@ -42,7 +53,7 @@ SUPABASE_SERVICE_KEY=your-service-key-here
 # GOOGLE GEMINI AI CONFIGURATION
 # ==========================================
 GEMINI_API_KEY=your-gemini-api-key-here
-GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MODEL=gemini-1.5-flash
 ```
 
 ### 3. **Run the Interface**
@@ -62,6 +73,12 @@ python app.py
 Open your browser and go to:
 - **Main Interface:** http://localhost:8001
 - **API Documentation:** http://localhost:8001/docs
+
+### 🚨 **Regional Issues?**
+
+If you get `400 User location not supported` error:
+- **See:** [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md)
+- **Or deploy to Render** (works worldwide)
 
 ## 🔧 Where to Get Your Credentials
 

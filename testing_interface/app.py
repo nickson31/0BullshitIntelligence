@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import uvicorn
+import os
 
 from config import settings
 from database import db_manager
@@ -217,11 +218,14 @@ if __name__ == "__main__":
     print(f"   - Supabase URL: {settings.SUPABASE_URL}")
     print(f"   - Gemini Model: {settings.GEMINI_MODEL}")
     
+    # Use environment PORT for Render compatibility
+    port = int(os.environ.get("PORT", settings.PORT))
+    
     # Run with uvicorn
     uvicorn.run(
         "app:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
+        host="0.0.0.0",
+        port=port,
+        reload=False,  # Disable reload in production
         log_level="info"
     )
