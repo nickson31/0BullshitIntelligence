@@ -7,10 +7,10 @@ import os
 from typing import Optional, List
 try:
     from pydantic_settings import BaseSettings
-    from pydantic import field_validator
+    from pydantic import field_validator, Field
 except ImportError:
     try:
-        from pydantic import BaseSettings, field_validator
+        from pydantic import BaseSettings, field_validator, Field
     except ImportError:
         # Fallback for when pydantic is not available
         class BaseSettings:
@@ -22,6 +22,9 @@ except ImportError:
             def decorator(func):
                 return func
             return decorator
+            
+        def Field(**kwargs):
+            return None
 from functools import lru_cache
 
 
@@ -33,12 +36,12 @@ class Settings(BaseSettings):
     # ==========================================
     app_name: str = "0BullshitIntelligence"
     app_version: str = "1.0.0"
-    environment: str = "production"
-    debug: bool = False
+    environment: str = Field(default="production", env="ENVIRONMENT")
+    debug: bool = Field(default=False, env="DEBUG")
     
     # Server configuration
-    host: str = "0.0.0.0"
-    port: int = 8000
+    host: str = Field(default="0.0.0.0", env="HOST")
+    port: int = Field(default=8000, env="PORT")
     workers: int = 1
     
     # ==========================================
@@ -46,22 +49,22 @@ class Settings(BaseSettings):
     # ==========================================
     
     # Supabase configuration
-    supabase_url: str
-    supabase_key: str
-    supabase_service_key: Optional[str] = None
+    supabase_url: str = Field(env="SUPABASE_URL")
+    supabase_key: str = Field(env="SUPABASE_KEY")
+    supabase_service_key: Optional[str] = Field(default=None, env="SUPABASE_SERVICE_KEY")
     
     @field_validator("supabase_url")
     @classmethod
     def validate_supabase_url(cls, v):
         if not v:
-            raise ValueError("Supabase URL is required")
+            raise ValueError("Supabase URL is required - set SUPABASE_URL environment variable")
         return v
         
     @field_validator("supabase_key")
     @classmethod
     def validate_supabase_key(cls, v):
         if not v:
-            raise ValueError("Supabase KEY is required")
+            raise ValueError("Supabase KEY is required - set SUPABASE_KEY environment variable")
         return v
     
     # ==========================================
@@ -69,8 +72,8 @@ class Settings(BaseSettings):
     # ==========================================
     
     # Google Gemini
-    gemini_api_key: str
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_api_key: str = Field(env="GEMINI_API_KEY")
+    gemini_model: str = Field(default="gemini-2.0-flash", env="GEMINI_MODEL")
     gemini_temperature: float = 0.7
     gemini_max_tokens: int = 3000
     
@@ -78,7 +81,7 @@ class Settings(BaseSettings):
     @classmethod
     def validate_gemini_key(cls, v):
         if not v:
-            raise ValueError("Gemini API key is required")
+            raise ValueError("Gemini API key is required - set GEMINI_API_KEY environment variable")
         return v
     
     # ==========================================
@@ -114,18 +117,31 @@ class Settings(BaseSettings):
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
-        "case_sensitive": False
+        "case_sensitive": False,
+        "extra": "allow"
     }
 
 
-@lru_cache()
 def get_settings() -> Settings:
-    """Get cached settings instance"""
-    return Settings()
+    """Get settings instance - removed caching for better env var detection"""
+    try:
+        return Settings()
+    except Exception as e:
+        print(f"❌ Configuration error: {e}")
+        print("📋 Required environment variables:")
+        print("   - SUPABASE_URL")
+        print("   - SUPABASE_KEY") 
+        print("   - GEMINI_API_KEY")
+        print(f"🔍 Current environment variables: {list(os.environ.keys())}")
+        raise
 
 
 # Convenient access to settings
-settings = get_settings()
+try:
+    settings = get_settings()
+except Exception:
+    # Create minimal settings for import - will fail on first use
+    settings = None
 
 
 # ==========================================
@@ -135,7 +151,9 @@ settings = get_settings()
 def validate_environment() -> None:
     """Validate that all required environment variables are set"""
     try:
-        settings = get_settings()
+        global settings
+        if settings is None:
+            settings = get_settings()
         
         # Test critical connections
         if not settings.supabase_url or not settings.supabase_key:
@@ -160,6 +178,9 @@ class FeatureFlags:
     
     @staticmethod
     def is_debug_mode() -> bool:
+        global settings
+        if settings is None:
+            return False
         return settings.debug or settings.environment == "development"
 
 

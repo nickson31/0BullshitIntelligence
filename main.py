@@ -17,7 +17,15 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 sys.path.insert(0, str(ROOT_DIR))
 
-from app.core.config import settings, validate_environment, features
+# Import the FastAPI app for Gunicorn
+try:
+    from app.api.app import app
+except ImportError:
+    # Create a minimal app if import fails
+    from fastapi import FastAPI
+    app = FastAPI(title="0BullshitIntelligence - Loading...")
+
+from app.core.config import validate_environment, features
 from app.core.logging import setup_logging, get_logger
 
 logger = get_logger(__name__)
@@ -63,16 +71,13 @@ async def initialize_services():
 
 
 def main():
-    """Main application entry point"""
+    """Main application entry point for direct execution"""
     print("🧠 Starting 0BullshitIntelligence...")
     
     # Setup logging first
     setup_logging()
     
     logger.info("🚀 Starting 0BullshitIntelligence...")
-    logger.info(f"Version: {settings.app_version}")
-    logger.info(f"Environment: {settings.environment}")
-    logger.info(f"Debug mode: {features.is_debug_mode()}")
     
     # Validate environment
     try:
@@ -93,35 +98,22 @@ def main():
         logger.error(f"❌ Failed to initialize services: {e}")
         sys.exit(1)
     
-    # Import and start the application
-    try:
-        from app.api.app import app
-        logger.info("✅ Application imported successfully")
-    except ImportError as e:
-        logger.error(f"❌ Failed to import application: {e}")
-        sys.exit(1)
+    logger.info("✅ Application setup completed")
     
-    # Server configuration
-    logger.info(f"🌐 Server configuration:")
-    logger.info(f"   Host: {settings.host}")
-    logger.info(f"   Port: {settings.port}")
-    logger.info(f"   Workers: {settings.workers}")
-    logger.info(f"   Debug: {features.is_debug_mode()}")
-    
-    # Start server
+    # Start server with uvicorn when run directly
     try:
         import uvicorn
+        from app.core.config import settings
         
         logger.info("🎯 Starting server...")
         uvicorn.run(
-            "app.api.app:app",
-            host=settings.host,
-            port=settings.port,
-            reload=features.is_debug_mode(),
-            log_level="info" if features.is_debug_mode() else "warning",
-            access_log=features.is_debug_mode(),
-            loop="asyncio",
-            workers=1 if features.is_debug_mode() else settings.workers
+            "main:app",
+            host=settings.host if settings else "0.0.0.0",
+            port=settings.port if settings else 8000,
+            reload=features.is_debug_mode() if features else False,
+            log_level="info",
+            access_log=True,
+            loop="asyncio"
         )
         
     except KeyboardInterrupt:
