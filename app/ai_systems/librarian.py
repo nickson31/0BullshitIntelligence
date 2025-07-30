@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.models.user import ProjectData, ProjectMetrics, TeamInfo, FundingInfo
+from app.models.user import ProjectData
 from app.models.ai_systems import LibrarianUpdate
 import google.generativeai as genai
 
@@ -271,32 +271,20 @@ Respond in this exact JSON format (only include fields with actual values):
         if 'stage' in extracted:
             current.stage = extracted['stage']
         
-        # Metrics - merge objects
+                # Metrics - store as dict in extracted_data
         if 'metrics' in extracted:
-            if not current.metrics:
-                current.metrics = ProjectMetrics()
-            
-            for key, value in extracted['metrics'].items():
-                if hasattr(current.metrics, key):
-                    setattr(current.metrics, key, value)
+            current.extracted_data = current.extracted_data or {}
+            current.extracted_data['metrics'] = extracted['metrics']
         
-        # Team info - merge objects
+        # Team info - store as dict in extracted_data
         if 'team_info' in extracted:
-            if not current.team_info:
-                current.team_info = TeamInfo()
-            
-            for key, value in extracted['team_info'].items():
-                if hasattr(current.team_info, key):
-                    setattr(current.team_info, key, value)
+            current.extracted_data = current.extracted_data or {}
+            current.extracted_data['team_info'] = extracted['team_info']
         
-        # Funding info - merge objects
+        # Funding info - store as dict in extracted_data  
         if 'funding_info' in extracted:
-            if not current.funding_info:
-                current.funding_info = FundingInfo()
-            
-            for key, value in extracted['funding_info'].items():
-                if hasattr(current.funding_info, key):
-                    setattr(current.funding_info, key, value)
+            current.extracted_data = current.extracted_data or {}
+            current.extracted_data['funding_info'] = extracted['funding_info']
         
         return current
     
@@ -332,32 +320,35 @@ Respond in this exact JSON format (only include fields with actual values):
             if value:
                 completed_weight += weight
         
-        # Metrics (20% weight)
-        if project_data.metrics:
+        # Metrics (20% weight) - check in extracted_data
+        metrics_data = project_data.extracted_data.get('metrics') if project_data.extracted_data else None
+        if metrics_data:
             metrics_fields = ['revenue', 'users', 'growth_rate']
             completed_metrics = sum(
                 1 for field in metrics_fields 
-                if getattr(project_data.metrics, field, None)
+                if metrics_data.get(field)
             )
             total_weight += 20
             completed_weight += (completed_metrics / len(metrics_fields)) * 20
         else:
             total_weight += 20
         
-        # Team info (10% weight)
-        if project_data.team_info:
+        # Team info (10% weight) - check in extracted_data
+        team_data = project_data.extracted_data.get('team_info') if project_data.extracted_data else None
+        if team_data:
             team_fields = ['size', 'founders']
             completed_team = sum(
                 1 for field in team_fields 
-                if getattr(project_data.team_info, field, None)
+                if team_data.get(field)
             )
             total_weight += 10
             completed_weight += (completed_team / len(team_fields)) * 10
         else:
             total_weight += 10
         
-        # Funding info (10% weight)
-        if project_data.funding_info:
+        # Funding info (10% weight) - check in extracted_data
+        funding_data = project_data.extracted_data.get('funding_info') if project_data.extracted_data else None
+        if funding_data:
             total_weight += 10
             completed_weight += 10
         else:
