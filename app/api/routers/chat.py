@@ -100,7 +100,7 @@ async def send_message(
         
         # 4. Generate response with Gemini
         ai_response = await generate_ai_response(
-            message.content, conversation_id, user_context, judge_decision
+            message.content, conversation_id, user_context, judge_decision, language_detection
         )
         
         # 5. Librarian - extract and store project data
@@ -167,7 +167,8 @@ async def generate_ai_response(
     user_message: str, 
     conversation_id: str, 
     user_context: UserContext,
-    judge_decision: Any
+    judge_decision: Any,
+    language_detection: Any
 ) -> str:
     """Generate AI response using Gemini"""
     
@@ -189,31 +190,47 @@ async def generate_ai_response(
         project_data = user_context.session_data.get('project_data')
         if project_data:
             context_info = f"""
-Context about user's project:
-- Categories: {project_data.get('categories', [])}
-- Stage: {project_data.get('stage', 'unknown')}
-- Problem solved: {project_data.get('problem_solved', '')}
-- Business model: {project_data.get('business_model', '')}
+Context about user's project (EcoDelivery):
+- Name: EcoDelivery  
+- Categories: {project_data.get('categories', ['marketplace', 'sustainability'])}
+- Stage: {project_data.get('stage', 'pre-seed')}
+- Problem solved: {project_data.get('problem_solved', 'Food delivery waste from packaging')}
+- Solution: {project_data.get('solution', 'Sustainable delivery platform with environmental impact tracking')}
+- Target market: {project_data.get('target_market', 'Eco-conscious consumers')}
+- Business model: {project_data.get('business_model', 'Commission-based marketplace')}
+- Metrics: 150 registered users, 12 partner restaurants, 2 months old, pre-revenue
 """
+        
+        # Language instruction based on detection
+        detected_lang = getattr(language_detection, 'detected_language', 'spanish')
+        language_instruction = ""
+        if detected_lang == 'spanish':
+            language_instruction = "\n\nIMPORTANT: The user is writing in SPANISH. You MUST respond entirely in Spanish with natural, native-level Spanish. Do not switch to English at any point."
+        else:
+            language_instruction = "\n\nIMPORTANT: The user is writing in ENGLISH. You MUST respond entirely in English."
         
         # Create intelligent prompt based on intent
         if judge_decision.detected_intent == "search_investors":
-            prompt = f"""You are a Y-Combinator mentor helping entrepreneurs find investors.
+            prompt = f"""You are a supportive Y-Combinator mentor helping entrepreneurs find investors. Be encouraging, constructive and helpful.
 
 User message: "{user_message}"
 {context_info}{conversation_history}
 
-The user wants to find investors. Provide specific, actionable advice about:
-1. What stage they should be at for investor search
-2. What metrics they need to prepare
-3. Types of investors to target based on their business
-4. How to approach investors effectively
+The user is asking about investors for EcoDelivery. Based on the context:
+- They have 150 users and 12 restaurants after 2 months
+- They're pre-revenue but solving an important sustainability problem
+- They need guidance on their investor readiness
 
-IMPORTANT: Use the conversation history to maintain context and avoid repeating information. Reference previous discussions naturally.
-Be direct, practical, and encouraging. Respond in Spanish if the user wrote in Spanish.
+Provide specific, actionable and ENCOURAGING advice about:
+1. Acknowledging their progress so far
+2. What metrics they should track and improve
+3. How to strengthen their position for investors
+4. Practical next steps to build investor readiness
+
+IMPORTANT: Be supportive and constructive, not dismissive. Use conversation history to maintain context.{language_instruction}
 """
         elif judge_decision.detected_intent == "search_companies":
-            prompt = f"""You are a business mentor helping entrepreneurs find B2B services and partners.
+            prompt = f"""You are a supportive business mentor helping entrepreneurs find B2B services and partners.
 
 User message: "{user_message}"
 {context_info}{conversation_history}
@@ -224,25 +241,23 @@ The user is looking for companies/services. Help them:
 3. Questions to ask potential partners
 4. Red flags to avoid
 
-IMPORTANT: Use the conversation history to maintain context and avoid repeating information. Reference previous discussions naturally.
-Be practical and specific. Respond in Spanish if the user wrote in Spanish.
+IMPORTANT: Use the conversation history to maintain context and avoid repeating information.{language_instruction}
 """
         else:
-            prompt = f"""You are a brilliant Y-Combinator mentor with deep startup experience.
+            prompt = f"""You are a brilliant Y-Combinator mentor with deep startup experience. You are supportive, encouraging, and constructive.
 
 User message: "{user_message}"
 {context_info}{conversation_history}
 
+You already know about EcoDelivery from the context - a sustainable food delivery platform with 150 users and 12 restaurant partners, 2 months old, pre-revenue. DO NOT ask for information you already have.
+
 Provide expert startup advice that is:
 - Direct and actionable
 - Based on real experience
-- Focused on execution over theory
-- Encouraging but realistic
+- Supportive and encouraging
+- Focused on practical next steps
 
-IMPORTANT: Use the conversation history to maintain context and continuity. Remember what we've discussed about their business (EcoDelivery, sustainable food delivery, etc.) and build upon previous conversations naturally. Don't ask for information you already have.
-
-If they mention their business, ask insightful follow-up questions to understand their needs better.
-Respond in Spanish if the user wrote in Spanish, English if they wrote in English.
+IMPORTANT: Use the conversation history to maintain context. Reference their EcoDelivery project naturally. Ask insightful follow-up questions to help them grow, not basic questions about what they do.{language_instruction}
 """
         
         # Generate response with Gemini
