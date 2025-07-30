@@ -260,13 +260,21 @@ class ChatInterface {
     
     handleIncomingMessage(data) {
         console.log('📨 Received message:', data);
+        console.log('📨 Message type:', data.type);
+        console.log('📨 Message content:', data.content || data.message);
         
         this.hideTypingIndicator();
         
-        if (data.type === 'chat_response') {
+        if (data.type === 'ai_response') {
+            this.addMessage('bot', data.content);
+        } else if (data.type === 'chat_response') {
             this.addMessage('bot', data.message);
         } else if (data.type === 'error') {
-            this.showToast(data.message || 'Error en el servidor', 'error');
+            this.showToast(data.content || data.message || 'Error en el servidor', 'error');
+        } else if (data.type === 'ai_typing') {
+            // AI is typing, keep showing typing indicator
+        } else {
+            console.log('🤷 Unknown message type:', data.type, data);
         }
     }
     
