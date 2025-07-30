@@ -196,19 +196,16 @@ class WebSocketManager:
     async def _handle_chat_message(self, conversation_id: str, data: Dict[str, Any]):
         """Handle chat message processing through AI systems"""
         try:
-            # Import here to avoid circular imports
-            from app.ai_systems.judge_system import judge_system
-            from app.ai_systems.anti_spam import anti_spam_system
-            from app.ai_systems.language_detection import language_detection_system
-            from app.ai_systems.librarian import librarian_bot
-            import google.generativeai as genai
-            from app.core.config import get_settings
+            logger.info("Starting chat message processing", 
+                       conversation_id=conversation_id,
+                       data_keys=list(data.keys()))
             
             # Get message content
-            content = data.get("content", "")
+            content = data.get("content", "").strip()
             session_id = data.get("session_id", str(uuid4()))
             
-            if not content.strip():
+            if not content:
+                logger.warning("Empty message content received")
                 await self.send_error_message(conversation_id, "Message content is required")
                 return
             
@@ -227,71 +224,101 @@ class WebSocketManager:
             # Session context for anonymous users
             session_data = {"session_id": session_id}
             
-            # 1. Anti-spam check
-            spam_result = await anti_spam_system.analyze_message(
-                content, conversation_id, session_data
-            )
-            
-            if spam_result.is_spam:
-                # Generate clever anti-spam response
-                spam_response = await anti_spam_system.generate_clever_response(
-                    spam_result, "spanish", session_data
-                )
+            try:
+                # Import AI systems
+                from app.ai_systems.judge_system import judge_system
+                from app.ai_systems.anti_spam import anti_spam_system
+                from app.ai_systems.language_detection import language_detection_system
+                from app.ai_systems.librarian import librarian_bot
                 
+                logger.info("AI systems imported successfully")
+                
+                # 1. Anti-spam check
+                logger.info("Starting anti-spam analysis")
+                spam_result = await anti_spam_system.analyze_message(
+                    content, conversation_id, session_data
+                )
+                logger.info("Anti-spam analysis complete", is_spam=spam_result.is_spam)
+                
+                if spam_result.is_spam:
+                    # Generate clever anti-spam response
+                    spam_response = await anti_spam_system.generate_clever_response(
+                        spam_result, "spanish", session_data
+                    )
+                    
+                    await self.send_ai_response(conversation_id, {
+                        "content": spam_response,
+                        "metadata": {
+                            "spam_detected": True,
+                            "spam_score": spam_result.spam_score
+                        }
+                    })
+                    return
+                
+                # 2. Language detection
+                logger.info("Starting language detection")
+                language_detection = await language_detection_system.detect_language(
+                    content, conversation_id, session_data
+                )
+                logger.info("Language detection complete", language=language_detection.detected_language)
+                
+                # 3. Judge system - determine intent
+                logger.info("Starting judge system analysis")
+                judge_decision = await judge_system.analyze_message(
+                    content, conversation_id, session_data
+                )
+                logger.info("Judge system analysis complete", intent=judge_decision.detected_intent)
+                
+                # 4. Generate response with Gemini
+                logger.info("Starting AI response generation")
+                ai_response = await self._generate_ai_response(
+                    content, conversation_id, session_data, judge_decision
+                )
+                logger.info("AI response generated", response_length=len(ai_response))
+                
+                # 5. Librarian - extract and store project data
+                logger.info("Starting librarian processing")
+                librarian_result = await librarian_bot.process_conversation_update(
+                    session_id,
+                    conversation_id, 
+                    content,
+                    ai_response,
+                    session_data.get('project_data')
+                )
+                logger.info("Librarian processing complete", completeness_score=librarian_result['completeness_score'])
+                
+                # Send AI response
                 await self.send_ai_response(conversation_id, {
-                    "content": spam_response,
+                    "content": ai_response,
                     "metadata": {
-                        "spam_detected": True,
-                        "spam_score": spam_result.spam_score
+                        "intent": judge_decision.detected_intent,
+                        "language": language_detection.detected_language,
+                        "confidence": judge_decision.confidence_score,
+                        "completeness_score": librarian_result['completeness_score'],
+                        "extracted_fields": librarian_result['extracted_fields']
                     }
                 })
-                return
-            
-            # 2. Language detection
-            language_detection = await language_detection_system.detect_language(
-                content, conversation_id, session_data
-            )
-            
-            # 3. Judge system - determine intent
-            judge_decision = await judge_system.analyze_message(
-                content, conversation_id, session_data
-            )
-            
-            # 4. Generate response with Gemini
-            ai_response = await self._generate_ai_response(
-                content, conversation_id, session_data, judge_decision
-            )
-            
-            # 5. Librarian - extract and store project data
-            librarian_result = await librarian_bot.process_conversation_update(
-                session_id,
-                conversation_id, 
-                content,
-                ai_response,
-                session_data.get('project_data')
-            )
-            
-            # Send AI response
-            await self.send_ai_response(conversation_id, {
-                "content": ai_response,
-                "metadata": {
-                    "intent": judge_decision.detected_intent,
-                    "language": language_detection.detected_language,
-                    "confidence": judge_decision.confidence_score,
-                    "completeness_score": librarian_result['completeness_score'],
-                    "extracted_fields": librarian_result['extracted_fields']
-                }
-            })
-            
-            logger.info("Chat message processed successfully",
-                       conversation_id=conversation_id,
-                       intent=judge_decision.detected_intent,
-                       completeness_score=librarian_result['completeness_score'])
+                
+                logger.info("Chat message processed successfully",
+                           conversation_id=conversation_id,
+                           intent=judge_decision.detected_intent,
+                           completeness_score=librarian_result['completeness_score'])
+                
+            except Exception as ai_error:
+                logger.error("AI systems processing failed", error=str(ai_error), error_type=type(ai_error).__name__)
+                # Send a simple response as fallback
+                await self.send_ai_response(conversation_id, {
+                    "content": "Hola! Soy tu asistente de IA. ¿En qué puedo ayudarte con tu startup? 🚀",
+                    "metadata": {"fallback_response": True}
+                })
             
         except Exception as e:
-            logger.error("Chat message processing failed", error=str(e))
-            await self.send_error_message(conversation_id, 
-                "Lo siento, hubo un problema técnico. ¿Podrías intentar de nuevo?")
+            logger.error("Chat message handling failed completely", error=str(e), error_type=type(e).__name__)
+            try:
+                await self.send_error_message(conversation_id, 
+                    "Lo siento, hubo un problema técnico. ¿Podrías intentar de nuevo?")
+            except Exception as send_error:
+                logger.error("Failed to send error message", error=str(send_error))
     
     async def _generate_ai_response(self, user_message: str, conversation_id: str, 
                                   session_data: Dict[str, Any], judge_decision: Any) -> str:
