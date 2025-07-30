@@ -1,247 +1,209 @@
 """
-Models for AI systems in 0BullshitIntelligence microservice.
+AI Systems models for 0BullshitIntelligence microservice.
 """
 
 from datetime import datetime
-from typing import Optional, Dict, Any, List
-from uuid import UUID
-from pydantic import Field, validator
+from typing import Optional, List, Dict, Any
+from uuid import UUID, uuid4
+from pydantic import Field
 
-from .base import BaseModel, TimestampMixin, Language, PlanType
+from .base import BaseModel, Language, ProjectStage, ProjectCategory, PlanType
 
 
 # ==========================================
 # JUDGE SYSTEM MODELS
 # ==========================================
 
-class JudgeProbabilities(BaseModel):
-    """Probabilities for different judge decisions"""
-    chat: float = Field(ge=0, le=1)
-    search_investors: float = Field(ge=0, le=1)
-    search_companies: float = Field(ge=0, le=1)
-    welcome: float = Field(ge=0, le=1)
-    upsell: float = Field(ge=0, le=1)
-    completeness: float = Field(ge=0, le=1)
-
-
-class ExtractedData(BaseModel):
-    """Data extracted from user messages"""
-    categories: Optional[List[str]] = None
-    stage: Optional[str] = None
-    funding_amount: Optional[str] = None
-    location: Optional[str] = None
-    team_size: Optional[int] = None
-    revenue: Optional[str] = None
-    additional_fields: Dict[str, Any] = Field(default_factory=dict)
-
-
 class JudgeDecision(BaseModel):
-    """Judge system decision result"""
-    decision: str  # Main action to take
-    confidence: float = Field(ge=0, le=1)
-    reasoning: str
-    probabilities: JudgeProbabilities
-    extracted_data: Optional[ExtractedData] = None
-    suggested_response: Optional[str] = None
-    requires_context: bool = False
-    urgency_level: int = Field(ge=1, le=5, default=3)  # 1=low, 5=urgent
+    """Judge system decision model"""
+    conversation_id: UUID
+    user_input: str = Field(max_length=1000)
+    detected_intent: str
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    should_search: bool = False
+    should_ask_questions: bool = False
+    should_upsell: bool = False
+    search_type: Optional[str] = None
+    reasoning: str = Field(max_length=2000)
+    language_detected: Language = Language.SPANISH
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
 
 
 # ==========================================
-# LANGUAGE DETECTION MODELS
+# LANGUAGE DETECTION
 # ==========================================
 
 class LanguageDetection(BaseModel):
     """Language detection result"""
+    conversation_id: UUID
+    text_sample: str = Field(max_length=500)
     detected_language: Language
-    confidence: float = Field(ge=0, le=1)
-    detected_phrases: List[str] = Field(default_factory=list)
-    response_language: Language
-    is_mixed_language: bool = False
-    alternative_languages: Optional[List[str]] = None
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    alternative_languages: Optional[List[Language]] = None
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ==========================================
-# ANTI-SPAM MODELS
+# ANTI-SPAM SYSTEM
 # ==========================================
-
-class SpamIndicators(BaseModel):
-    """Indicators that suggest spam content"""
-    repeated_content: bool = False
-    offensive_language: bool = False
-    nonsensical_text: bool = False
-    system_manipulation: bool = False
-    off_topic: bool = False
-    excessive_length: bool = False
-
 
 class AntiSpamResult(BaseModel):
-    """Anti-spam detection result"""
-    is_spam: bool
-    spam_score: float = Field(ge=0, le=100)
-    confidence: float = Field(ge=0, le=1)
-    reason: str
-    indicators: SpamIndicators
-    suggested_action: str  # "allow", "warn", "block", "moderate"
-    response_tone: str = "normal"  # "normal", "warning", "strict"
+    """Anti-spam analysis result"""
+    conversation_id: UUID
+    user_input: str = Field(max_length=1000)
+    spam_score: int = Field(ge=0, le=100)
+    is_spam: bool = False
+    detected_patterns: Optional[List[str]] = None
+    reasoning: Optional[str] = Field(max_length=1000)
+    action_taken: Optional[str] = None
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ==========================================
-# UPSELLING SYSTEM MODELS
+# UPSELLING SYSTEM
 # ==========================================
-
-class UpsellTrigger(BaseModel):
-    """Upselling trigger information"""
-    trigger_type: str
-    trigger_value: Optional[str] = None
-    priority: int = Field(ge=1, le=100)
-    message_type: str
-
 
 class UpsellOpportunity(BaseModel):
-    """Upselling opportunity details"""
-    should_upsell: bool
-    current_plan: PlanType
-    target_plan: PlanType
-    trigger: UpsellTrigger
-    confidence: float = Field(ge=0, le=1)
-    message: str
-    benefits: List[str] = Field(default_factory=list)
-    urgency: str = "medium"  # "low", "medium", "high"
-    call_to_action: str
-    discount_available: bool = False
+    """Upselling opportunity detection"""
+    conversation_id: UUID
+    user_id: UUID
+    current_plan: PlanType = PlanType.FREE
+    suggested_plan: PlanType
+    trigger_context: str = Field(max_length=500)
+    confidence_score: float = Field(ge=0.0, le=1.0)
+    message_template: str = Field(max_length=2000)
+    should_present: bool = False
+    cooldown_until: Optional[datetime] = None
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ==========================================
-# WELCOME SYSTEM MODELS
+# WELCOME SYSTEM
 # ==========================================
-
-class OnboardingStage(BaseModel):
-    """Individual onboarding stage"""
-    stage_id: str
-    title: str
-    description: str
-    order: int
-    required: bool = True
-    completed: bool = False
-    completion_date: Optional[datetime] = None
-
-
-class WelcomeContext(BaseModel):
-    """Context for welcome system"""
-    is_new_user: bool
-    current_stage: Optional[str] = None
-    completed_stages: List[str] = Field(default_factory=list)
-    onboarding_progress: float = Field(ge=0, le=100, default=0)
-    needs_welcome: bool = True
-
 
 class WelcomeMessage(BaseModel):
-    """Welcome system message"""
-    message_type: str  # "welcome", "onboarding", "progress", "completion"
-    content: str
-    context: WelcomeContext
-    next_steps: List[str] = Field(default_factory=list)
-    stage_info: Optional[OnboardingStage] = None
-    show_progress: bool = True
-    interactive_elements: Optional[List[Dict[str, Any]]] = None
+    """Welcome message configuration"""
+    conversation_id: UUID
+    user_id: UUID
+    onboarding_stage: int = Field(ge=1, le=5)
+    message_content: str = Field(max_length=2000)
+    next_questions: Optional[List[str]] = None
+    completed_stages: List[int] = Field(default_factory=list)
+    is_returning_user: bool = False
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # ==========================================
-# LIBRARIAN SYSTEM MODELS
+# AI SYSTEM RESPONSES
 # ==========================================
 
-class ProjectMetrics(BaseModel):
-    """Project metrics data"""
-    revenue: Optional[str] = None
-    users: Optional[int] = None
-    growth_rate: Optional[str] = None
-    burn_rate: Optional[str] = None
-    runway: Optional[str] = None
-    mrr: Optional[str] = None
-    arr: Optional[str] = None
-    churn_rate: Optional[float] = None
+class AISystemResponse(BaseModel):
+    """Generic AI system response"""
+    system_name: str
+    conversation_id: UUID
+    processing_time_ms: float
+    success: bool = True
+    error_message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 
-class TeamInfo(BaseModel):
-    """Team information"""
-    size: Optional[int] = None
-    founders: Optional[List[str]] = None
-    key_hires: Optional[List[str]] = None
-    advisors: Optional[List[str]] = None
-    investors: Optional[List[str]] = None
-    experience: Optional[str] = None
+# ==========================================
+# PROJECT DATA EXTRACTION
+# ==========================================
 
-
-class LibrarianExtraction(BaseModel):
-    """Data extracted by librarian"""
-    categories: Optional[List[str]] = None
-    stage: Optional[str] = None
-    metrics: Optional[ProjectMetrics] = None
-    team_info: Optional[TeamInfo] = None
-    problem_solved: Optional[str] = None
+class ProjectDataExtraction(BaseModel):
+    """Extracted project data from conversation"""
+    conversation_id: UUID
+    user_id: UUID
+    project_name: Optional[str] = None
+    project_description: Optional[str] = Field(max_length=2000)
+    project_stage: Optional[ProjectStage] = None
+    project_category: Optional[ProjectCategory] = None
     target_market: Optional[str] = None
     business_model: Optional[str] = None
+    team_size: Optional[int] = None
+    current_revenue: Optional[str] = None
     competitive_advantage: Optional[str] = None
     funding_needs: Optional[str] = None
     use_of_funds: Optional[str] = None
 
 
-class LibrarianUpdate(BaseModel, TimestampMixin):
-    """Librarian system update"""
+class LibrarianUpdate(BaseModel):
+    """Librarian system update - fixed MRO issue"""
     conversation_id: UUID
     project_id: UUID
     user_message: str = Field(max_length=500)  # Truncated for storage
     assistant_response: str = Field(max_length=500)  # Truncated for storage
-    extractions: LibrarianExtraction
-    confidence: float = Field(ge=0, le=1)
-    changes_made: List[str] = Field(default_factory=list)
-    processing_time_ms: float
+    message_pair_id: UUID = Field(default_factory=uuid4)
+    context_extracted: Optional[Dict[str, Any]] = None
+    embedding_vector: Optional[List[float]] = None
+    relevance_score: Optional[float] = Field(ge=0.0, le=1.0)
     success: bool = True
-
-
-# ==========================================
-# Y-COMBINATOR MENTOR MODELS
-# ==========================================
-
-class YCPrinciple(BaseModel):
-    """Y-Combinator principle reference"""
-    principle_id: str
-    title: str
-    description: str
-    relevance_score: float = Field(ge=0, le=1)
-
-
-class MentorAdvice(BaseModel):
-    """Y-Combinator style mentor advice"""
-    advice_type: str  # "direct", "question", "challenge", "guidance"
-    content: str
-    principles_applied: List[YCPrinciple] = Field(default_factory=list)
-    actionable_steps: List[str] = Field(default_factory=list)
-    tough_questions: List[str] = Field(default_factory=list)
-    tone: str = "direct"  # "direct", "supportive", "challenging"
-    follow_up_needed: bool = False
-
-
-# ==========================================
-# COMPOSITE AI RESPONSE MODEL
-# ==========================================
-
-class AISystemResponse(BaseModel, TimestampMixin):
-    """Complete AI system response combining all components"""
-    judge_decision: JudgeDecision
-    language_detection: LanguageDetection
-    anti_spam_result: Optional[AntiSpamResult] = None
-    upsell_opportunity: Optional[UpsellOpportunity] = None
-    welcome_message: Optional[WelcomeMessage] = None
-    mentor_advice: Optional[MentorAdvice] = None
-    librarian_update: Optional[LibrarianUpdate] = None
     
-    # Performance metrics
-    total_processing_time_ms: float
-    ai_tokens_used: Optional[int] = None
-    
-    # Context
-    user_id: UUID
+    # Timestamp fields directly in the model
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = None
+
+
+# ==========================================
+# CONVERSATION CONTEXT
+# ==========================================
+
+class ConversationContextUpdate(BaseModel):
+    """Context update for conversation memory"""
     conversation_id: UUID
-    project_id: Optional[UUID] = None
+    user_id: UUID
+    context_type: str = Field(max_length=50)
+    context_data: Dict[str, Any]
+    importance_score: float = Field(ge=0.0, le=1.0)
+    expires_at: Optional[datetime] = None
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# ==========================================
+# METRICS AND MONITORING
+# ==========================================
+
+class AISystemMetrics(BaseModel):
+    """Metrics for AI system performance"""
+    system_name: str
+    conversation_id: UUID
+    operation_type: str
+    processing_time_ms: float
+    memory_usage_mb: Optional[float] = None
+    tokens_used: Optional[int] = None
+    api_calls_made: int = 0
+    success_rate: float = Field(ge=0.0, le=1.0)
+    error_count: int = 0
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SystemHealthCheck(BaseModel):
+    """System health check result"""
+    system_name: str
+    status: str = Field(default="healthy")  # healthy, degraded, down
+    response_time_ms: float
+    last_error: Optional[str] = None
+    uptime_percentage: float = Field(ge=0.0, le=100.0)
+    dependencies_status: Optional[Dict[str, str]] = None
+    
+    # Timestamp fields
+    created_at: datetime = Field(default_factory=datetime.utcnow)

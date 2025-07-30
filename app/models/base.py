@@ -12,28 +12,24 @@ from enum import Enum
 class BaseModel(PydanticBaseModel):
     """Base model with common configuration"""
     
-    class Config:
-        # Enable JSON serialization for UUID and datetime
-        json_encoders = {
+    model_config = {
+        "json_encoders": {
             datetime: lambda v: v.isoformat(),
             UUID: lambda v: str(v)
-        }
-        # Allow population by field name or alias
-        allow_population_by_field_name = True
-        # Validate assignments to ensure data integrity
-        validate_assignment = True
-        # Use enum values instead of names
-        use_enum_values = True
+        },
+        "validate_assignment": True,
+        "use_enum_values": True
+    }
 
 
-class TimestampMixin(BaseModel):
-    """Mixin for models that need timestamp fields"""
+class TimestampMixin:
+    """Mixin for models that need timestamp fields - NOT inheriting from BaseModel"""
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: Optional[datetime] = None
 
 
-class UUIDMixin(BaseModel):
-    """Mixin for models that need UUID primary keys"""
+class UUIDMixin:
+    """Mixin for models that need UUID primary keys - NOT inheriting from BaseModel"""
     id: UUID = Field(default_factory=uuid4)
 
 
