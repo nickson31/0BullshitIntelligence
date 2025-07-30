@@ -1,150 +1,111 @@
 # 0BullshitIntelligence
 
-🧠 **Inteligencia artificial sin tonterías. Conversaciones reales, respuestas útiles.**
+AI-powered chat application with modern UI and Gemini 2.0 Flash integration.
 
-Una aplicación de chat con IA moderna y elegante, powered by Gemini 2.0 Flash, diseñada para proporcionar respuestas precisas y conversaciones naturales.
+## 🚀 Features
 
-## ✨ Características
+- **Real-time Chat**: WebSocket-powered conversations with Gemini 2.0 Flash
+- **Smart Search**: Find investors and companies based on your project needs  
+- **Intelligent Upselling**: AI-powered upgrade suggestions based on user plan
+- **Modern UI**: Clean, responsive interface with dark theme
+- **Supabase Integration**: User management and data persistence
 
-- **🤖 IA Avanzada**: Integración con Gemini 2.0 Flash para conversaciones naturales
-- **💬 Chat en Tiempo Real**: WebSockets para comunicación instantánea
-- **🎨 UI Moderna**: Interfaz dark theme con animaciones suaves
-- **📱 Responsive**: Optimizada para desktop y móvil
-- **🌐 Multiidioma**: Soporte para español e inglés
-- **⚡ Ultra Rápido**: Arquitectura optimizada para rendimiento
+## 🛠 Tech Stack
 
-## 🚀 Despliegue en Render
+- **Backend**: FastAPI + Uvicorn/Gunicorn
+- **AI**: Google Gemini 2.0 Flash
+- **Database**: Supabase
+- **Frontend**: HTML5 + CSS3 + Vanilla JavaScript
+- **Deployment**: Render
 
-Este proyecto está configurado para deployment directo en Render.
+## 🌐 Deployment
 
-### Variables de Entorno Requeridas
+### Render Configuration
 
-Configura estas variables en tu dashboard de Render:
+The application is configured for Render deployment with:
+- `render.yaml` for service configuration
+- `Procfile` for process definition
+- Environment variables managed in Render dashboard
 
-```
-SUPABASE_URL=tu_supabase_url
-SUPABASE_KEY=tu_supabase_anon_key
-GEMINI_API_KEY=tu_gemini_api_key
-```
+### Environment Variables
 
-### Deploy Automático
+Set these in Render:
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `GEMINI_API_KEY`: Your Google AI API key
+- `GEMINI_MODEL`: Model name (default: gemini-2.0-flash)
 
-1. Conecta tu repositorio a Render
-2. Configura las variables de entorno
-3. Render detectará automáticamente `render.yaml` y desplegará
+### Local Development
 
-## 🛠️ Desarrollo Local
-
-### Requisitos
-
-- Python 3.11+
-- pip
-
-### Instalación
-
-1. Clona el repositorio:
 ```bash
-git clone <tu-repo>
-cd 0bullshitintelligence
-```
-
-2. Instala dependencias:
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
 
-3. Configura variables de entorno:
-```bash
-cp env.example .env
-# Edita .env con tus valores
-```
+# Set environment variables
+cp .env.example .env
+# Edit .env with your values
 
-4. Ejecuta la aplicación:
-```bash
+# Run locally  
 python main.py
 ```
 
-La aplicación estará disponible en `http://localhost:8000`
-
-## 📁 Estructura del Proyecto
+## 📁 Project Structure
 
 ```
-├── app/                    # Aplicación principal
-│   ├── api/               # Endpoints y rutas
-│   ├── core/              # Configuración y utilidades
-│   ├── database/          # Gestión de base de datos
-│   ├── ai_systems/        # Sistemas de IA
-│   ├── models/            # Modelos de datos
-│   ├── services/          # Servicios de negocio
-│   ├── templates/         # Templates HTML
-│   └── static/            # Archivos estáticos (CSS, JS)
-├── docs/                  # Documentación
-├── main.py               # Punto de entrada
-├── requirements.txt      # Dependencias
-├── render.yaml          # Configuración de Render
-├── Procfile            # Para deployment
-└── runtime.txt         # Versión de Python
+├── app/
+│   ├── api/          # FastAPI routes and middleware
+│   ├── core/         # Configuration and logging
+│   ├── models/       # Pydantic models
+│   ├── static/       # CSS, JS, assets
+│   └── templates/    # Jinja2 HTML templates
+├── main.py           # Application entry point
+├── requirements.txt  # Python dependencies
+└── render.yaml       # Render deployment config
 ```
 
-## 🎯 Características Técnicas
+## 🎯 Technical Features
 
-- **Backend**: FastAPI + Uvicorn + Gunicorn
-- **IA**: Google Gemini 2.0 Flash
-- **Base de Datos**: Supabase
-- **WebSockets**: Para chat en tiempo real
-- **Frontend**: HTML5 + CSS3 + Vanilla JavaScript
-- **Deployment**: Render con configuración automática
-
-## 🔧 Configuración de Producción
-
-El proyecto está optimizado para producción con:
-
-- Configuración automática de entorno
-- Manejo de errores robusto
-- Logs estructurados
-- Conexiones WebSocket resilientes
-- UI responsiva y accesible
-
-## 📚 API Endpoints
-
-- `GET /` - Página principal
-- `GET /chat` - Interfaz de chat
-- `GET /api/status` - Estado del sistema
-- `WS /ws/chat/{conversation_id}` - WebSocket para chat
+- **WebSocket Communication**: Real-time bidirectional chat
+- **Structured Logging**: JSON-formatted logs with context
+- **Error Handling**: Comprehensive exception management
+- **Rate Limiting**: API protection against abuse
+- **CORS Support**: Cross-origin resource sharing
+- **Static File Serving**: Efficient asset delivery
 
 ## 🎨 UI/UX
 
-- **Tema Dark**: Diseño moderno con gradientes
-- **Animaciones**: Transiciones suaves y efectos visuales
-- **Responsiva**: Optimizada para todos los dispositivos
-- **Accesible**: Cumple estándares de accesibilidad web
+- **Responsive Design**: Works on desktop and mobile
+- **Dark Theme**: Modern, eye-friendly interface
+- **Smooth Animations**: CSS transitions and effects
+- **Toast Notifications**: User feedback system
+- **Loading States**: Progress indicators
+- **Typing Indicators**: Real-time chat feedback
 
-## 🔒 Seguridad
+## 🔒 Security
 
-- Variables de entorno para credenciales
-- Validación de entrada robusta
-- Configuración CORS apropiada
-- Rate limiting incluido
+- **Environment Variables**: Sensitive data not in code
+- **Input Validation**: Pydantic model validation
+- **Rate Limiting**: Request throttling
+- **CORS Configuration**: Controlled cross-origin access
 
-## 📈 Monitoreo
+## 📊 Monitoring
 
-- Logs estructurados
-- Health checks automáticos
-- Métricas de rendimiento
-- Estado de componentes en tiempo real
+- **Health Checks**: Service status endpoints
+- **Performance Logging**: Request timing and metrics
+- **Error Tracking**: Comprehensive error logging
+- **Business Events**: User interaction analytics
 
-## 🤝 Contribuir
+## 🤝 Contributing
 
-1. Fork el proyecto
-2. Crea una rama para tu feature
-3. Commit tus cambios
-4. Push a la rama
-5. Abre un Pull Request
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
 
-## 📝 Licencia
+## 📝 License
 
-Este proyecto está bajo una licencia personalizada. Ver el archivo de licencia para más detalles.
+This project is licensed under the MIT License.
 
 ---
 
-**🧠 0BullshitIntelligence - Sin tonterías, solo resultados.**
+**Built with ❤️ for intelligent business conversations**
