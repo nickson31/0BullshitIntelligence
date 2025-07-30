@@ -1,59 +1,150 @@
-# 0BullshitIntelligence - AI Microservice
+# 0BullshitIntelligence
 
-🎯 **Specialized AI-powered microservice for connecting startups with investors**
+🧠 **Inteligencia artificial sin tonterías. Conversaciones reales, respuestas útiles.**
 
-## ⚡ Powered by Google Gemini 2.0 Flash
+Una aplicación de chat con IA moderna y elegante, powered by Gemini 2.0 Flash, diseñada para proporcionar respuestas precisas y conversaciones naturales.
 
-This microservice is **100% optimized for Google Gemini 2.0 Flash**, providing:
+## ✨ Características
 
-- 🧠 **Judge System** - Advanced intent analysis and multi-decision routing
-- 🔍 **Hybrid Search** - Intelligent investor (Angels + Funds) and company matching  
-- 💬 **Y-Combinator Mentor** - Direct, actionable advice in YC style
-- 🚀 **Real-time WebSockets** - Live search progress and chat updates
-- 🛡️ **Anti-spam & Language Detection** - Robust conversation management
-- 💰 **Smart Upselling** - Non-intrusive plan upgrade suggestions
+- **🤖 IA Avanzada**: Integración con Gemini 2.0 Flash para conversaciones naturales
+- **💬 Chat en Tiempo Real**: WebSockets para comunicación instantánea
+- **🎨 UI Moderna**: Interfaz dark theme con animaciones suaves
+- **📱 Responsive**: Optimizada para desktop y móvil
+- **🌐 Multiidioma**: Soporte para español e inglés
+- **⚡ Ultra Rápido**: Arquitectura optimizada para rendimiento
 
-## 🚀 Quick Start
+## 🚀 Despliegue en Render
 
-1. **Configure Gemini API**:
-   ```bash
-   cp env.example .env
-   # Add your GEMINI_API_KEY to .env
-   ```
+Este proyecto está configurado para deployment directo en Render.
 
-2. **Install & Run**:
-   ```bash
-   pip install -r requirements.txt
-   python main.py
-   ```
+### Variables de Entorno Requeridas
 
-3. **Access API**: `http://localhost:8000/docs`
+Configura estas variables en tu dashboard de Render:
 
-## 📚 Documentation
+```
+SUPABASE_URL=tu_supabase_url
+SUPABASE_KEY=tu_supabase_anon_key
+GEMINI_API_KEY=tu_gemini_api_key
+```
 
-- **[API Endpoints](docs/ENDPOINTS.md)** - Complete API reference (142 endpoints)
-- **[Implementation Summary](docs/RESUMEN_IMPLEMENTACION.md)** - Technical details
-- **[README](docs/README.md)** - Detailed architecture overview
+### Deploy Automático
 
-## 🎯 Key Features
+1. Conecta tu repositorio a Render
+2. Configura las variables de entorno
+3. Render detectará automáticamente `render.yaml` y desplegará
 
-### AI-Powered Decision Making
-- **Multi-decision Judge System** using Gemini 2.0 Flash
-- **Context-aware responses** based on project completeness
-- **Simultaneous actions**: Search + Questions + Upselling
+## 🛠️ Desarrollo Local
 
-### Intelligent Search
-- **Hybrid investor search** (70/30 Angels/Funds ratio by stage)
-- **Company B2B matching** with keyword enhancement
-- **Real-time progress updates** via WebSockets
-- **CTO-ready results** stored for outreach campaigns
+### Requisitos
 
-### Production Ready
-- **JWT Authentication** with service-to-service communication
-- **Rate limiting** and CORS middleware
-- **Structured logging** with request tracking
-- **Health checks** for all critical systems
+- Python 3.11+
+- pip
+
+### Instalación
+
+1. Clona el repositorio:
+```bash
+git clone <tu-repo>
+cd 0bullshitintelligence
+```
+
+2. Instala dependencias:
+```bash
+pip install -r requirements.txt
+```
+
+3. Configura variables de entorno:
+```bash
+cp env.example .env
+# Edita .env con tus valores
+```
+
+4. Ejecuta la aplicación:
+```bash
+python main.py
+```
+
+La aplicación estará disponible en `http://localhost:8000`
+
+## 📁 Estructura del Proyecto
+
+```
+├── app/                    # Aplicación principal
+│   ├── api/               # Endpoints y rutas
+│   ├── core/              # Configuración y utilidades
+│   ├── database/          # Gestión de base de datos
+│   ├── ai_systems/        # Sistemas de IA
+│   ├── models/            # Modelos de datos
+│   ├── services/          # Servicios de negocio
+│   ├── templates/         # Templates HTML
+│   └── static/            # Archivos estáticos (CSS, JS)
+├── docs/                  # Documentación
+├── main.py               # Punto de entrada
+├── requirements.txt      # Dependencias
+├── render.yaml          # Configuración de Render
+├── Procfile            # Para deployment
+└── runtime.txt         # Versión de Python
+```
+
+## 🎯 Características Técnicas
+
+- **Backend**: FastAPI + Uvicorn + Gunicorn
+- **IA**: Google Gemini 2.0 Flash
+- **Base de Datos**: Supabase
+- **WebSockets**: Para chat en tiempo real
+- **Frontend**: HTML5 + CSS3 + Vanilla JavaScript
+- **Deployment**: Render con configuración automática
+
+## 🔧 Configuración de Producción
+
+El proyecto está optimizado para producción con:
+
+- Configuración automática de entorno
+- Manejo de errores robusto
+- Logs estructurados
+- Conexiones WebSocket resilientes
+- UI responsiva y accesible
+
+## 📚 API Endpoints
+
+- `GET /` - Página principal
+- `GET /chat` - Interfaz de chat
+- `GET /api/status` - Estado del sistema
+- `WS /ws/chat/{conversation_id}` - WebSocket para chat
+
+## 🎨 UI/UX
+
+- **Tema Dark**: Diseño moderno con gradientes
+- **Animaciones**: Transiciones suaves y efectos visuales
+- **Responsiva**: Optimizada para todos los dispositivos
+- **Accesible**: Cumple estándares de accesibilidad web
+
+## 🔒 Seguridad
+
+- Variables de entorno para credenciales
+- Validación de entrada robusta
+- Configuración CORS apropiada
+- Rate limiting incluido
+
+## 📈 Monitoreo
+
+- Logs estructurados
+- Health checks automáticos
+- Métricas de rendimiento
+- Estado de componentes en tiempo real
+
+## 🤝 Contribuir
+
+1. Fork el proyecto
+2. Crea una rama para tu feature
+3. Commit tus cambios
+4. Push a la rama
+5. Abre un Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo una licencia personalizada. Ver el archivo de licencia para más detalles.
 
 ---
 
-**Ready for production deployment with Docker + Supabase + Gemini 2.0 Flash** 🚀
+**🧠 0BullshitIntelligence - Sin tonterías, solo resultados.**

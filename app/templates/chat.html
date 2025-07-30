@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - 0BullshitIntelligence</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+</head>
+<body class="chat-body">
+    <div class="chat-container">
+        <!-- Chat Header -->
+        <header class="chat-header">
+            <div class="chat-header-left">
+                <a href="/" class="back-button">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M15.8334 10H4.16669M4.16669 10L9.16669 15M4.16669 10L9.16669 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </a>
+                <div class="chat-title">
+                    <div class="chat-avatar">🧠</div>
+                    <div class="chat-info">
+                        <h2>0BullshitIntelligence</h2>
+                        <span class="chat-status" id="connectionStatus">🟢 Conectado</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-header-right">
+                <button class="clear-chat-btn" id="clearChatBtn" title="Limpiar conversación">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                        <path d="M2.5 5H17.5M8.33333 9.16667V14.1667M11.6667 9.16667V14.1667M3.33333 5L4.16667 16.6667C4.16667 17.1087 4.34226 17.5326 4.65482 17.8452C4.96738 18.1577 5.39131 18.3333 5.83333 18.3333H14.1667C14.6087 18.3333 15.0326 18.1577 15.3452 17.8452C15.6577 17.5326 15.8333 17.1087 15.8333 16.6667L16.6667 5M7.5 5V3.33333C7.5 2.89131 7.67559 2.46738 7.98816 2.15482C8.30072 1.84226 8.72464 1.66667 9.16667 1.66667H10.8333C11.2754 1.66667 11.6993 1.84226 12.0118 2.15482C12.3244 2.46738 12.5 2.89131 12.5 3.33333V5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Chat Messages Area -->
+        <main class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+                <div class="welcome-message">
+                    <div class="message bot-message">
+                        <div class="message-avatar">🧠</div>
+                        <div class="message-content">
+                            <p>¡Hola! Soy tu asistente de IA sin tonterías. ¿En qué puedo ayudarte hoy?</p>
+                            <span class="message-time" id="welcomeTime"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Typing Indicator -->
+            <div class="typing-indicator" id="typingIndicator">
+                <div class="message bot-message">
+                    <div class="message-avatar">🧠</div>
+                    <div class="message-content">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Chat Input Area -->
+        <footer class="chat-footer">
+            <div class="chat-input-container">
+                <form class="chat-form" id="chatForm">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            class="message-input" 
+                            placeholder="Escribe tu mensaje aquí..." 
+                            rows="1"
+                            maxlength="2000"
+                        ></textarea>
+                        <div class="input-actions">
+                            <span class="char-counter" id="charCounter">0/2000</span>
+                            <button type="submit" class="send-button" id="sendButton">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                    <path d="M18.3334 1.66663L9.16669 10.8333M18.3334 1.66663L12.5 18.3333L9.16669 10.8333M18.3334 1.66663L1.66669 7.49996L9.16669 10.8333" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                <div class="chat-suggestions" id="chatSuggestions">
+                    <button class="suggestion-chip">¿Qué puedes hacer?</button>
+                    <button class="suggestion-chip">Ayúdame con código</button>
+                    <button class="suggestion-chip">Explícame un concepto</button>
+                    <button class="suggestion-chip">Resuelve un problema</button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Connection Lost Modal -->
+    <div class="modal" id="connectionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚠️ Conexión perdida</h3>
+            </div>
+            <div class="modal-body">
+                <p>Se ha perdido la conexión con el servidor. Intentando reconectar...</p>
+                <div class="reconnection-spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/chat.js"></script>
+</body>
+</html>

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-0BullshitIntelligence Microservice
-==================================
+0BullshitIntelligence - AI Chat Application
+==========================================
 
-Independent AI Chat Microservice for 0Bullshit Platform.
-Handles all AI-driven conversations, intelligent user interactions, and search operations.
+AI-powered chat application with modern UI and Gemini integration.
 
 Author: 0Bullshit Team
 Version: 1.0.0
@@ -32,8 +31,7 @@ def check_dependencies():
         import google.generativeai
         import pydantic
         import uvicorn
-        import structlog
-        import httpx
+        import jinja2
         logger.info("✅ All critical dependencies are available")
         return True
     except ImportError as e:
@@ -57,17 +55,6 @@ async def initialize_services():
         await ai_coordinator.initialize()
         logger.info("✅ AI systems initialized")
         
-        # Initialize search engines
-        from app.search import search_coordinator
-        await search_coordinator.initialize()
-        logger.info("✅ Search engines initialized")
-        
-        # Initialize sync service if enabled
-        if features.is_sync_enabled():
-            from app.services.sync_service import sync_service
-            await sync_service.initialize()
-            logger.info("✅ Database synchronization service initialized")
-        
         return True
         
     except Exception as e:
@@ -77,12 +64,12 @@ async def initialize_services():
 
 def main():
     """Main application entry point"""
-    print("🧠 Starting 0BullshitIntelligence Microservice...")
+    print("🧠 Starting 0BullshitIntelligence...")
     
     # Setup logging first
     setup_logging()
     
-    logger.info("🚀 Starting 0BullshitIntelligence Microservice...")
+    logger.info("🚀 Starting 0BullshitIntelligence...")
     logger.info(f"Version: {settings.app_version}")
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"Debug mode: {features.is_debug_mode()}")
@@ -120,12 +107,6 @@ def main():
     logger.info(f"   Port: {settings.port}")
     logger.info(f"   Workers: {settings.workers}")
     logger.info(f"   Debug: {features.is_debug_mode()}")
-    
-    # Feature flags status
-    logger.info(f"🎯 Feature flags:")
-    logger.info(f"   Database sync: {features.is_sync_enabled()}")
-    logger.info(f"   Testing interface: {features.is_testing_interface_enabled()}")
-    logger.info(f"   Metrics: {features.is_metrics_enabled()}")
     
     # Start server
     try:
