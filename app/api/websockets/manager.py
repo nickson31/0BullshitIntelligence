@@ -325,7 +325,7 @@ class WebSocketManager:
     
     async def _generate_ai_response(self, user_message: str, conversation_id: str, 
                                   session_data: Dict[str, Any], judge_decision: Any) -> str:
-        """Generate AI response using Gemini"""
+        """Generate AI response using Gemini based on detected intent"""
         try:
             from app.core.config import get_settings
             import google.generativeai as genai
@@ -334,61 +334,142 @@ class WebSocketManager:
             genai.configure(api_key=settings.gemini_api_key)
             model = genai.GenerativeModel(settings.gemini_model)
             
-            # Build context-aware prompt
+            # Build context-aware prompt based on intent
+            intent = judge_decision.detected_intent
+            
+            # Get conversation state from judge system
+            judge_conv_state = {}
+            if hasattr(judge_decision, 'conversation_states'):
+                judge_conv_state = judge_decision.conversation_states.get(conversation_id, {})
+            
+            project_data = session_data.get('project_data', {})
             context_info = ""
-            project_data = session_data.get('project_data')
             if project_data:
                 context_info = f"""
-Context about user's project:
+User's project context:
 - Categories: {project_data.get('categories', [])}
 - Stage: {project_data.get('stage', 'unknown')}
-- Problem solved: {project_data.get('problem_solved', '')}
+- Problem: {project_data.get('problem_solved', '')}
 - Business model: {project_data.get('business_model', '')}
 """
             
-            # Create intelligent prompt based on intent
-            if judge_decision.detected_intent == "search_investors":
-                prompt = f"""You are a Y-Combinator mentor helping entrepreneurs find investors.
+            # Create appropriate prompt based on intent
+            if intent == "simple_greeting":
+                # Simple, friendly greeting without business assumptions
+                language = "spanish" if any(word in user_message.lower() for word in ["hola", "buenas", "qué"]) else "english"
+                
+                if language == "spanish":
+                    prompt = f"""Responde a este saludo de manera amigable y natural:
 
-User message: "{user_message}"
+Usuario: "{user_message}"
+
+Instrucciones:
+- Saluda de vuelta de manera casual y amigable
+- Pregunta cómo puedes ayudar de forma simple
+- NO asumas que tienen un negocio o startup
+- NO des consejos no solicitados
+- Máximo 2-3 frases
+- Mantén un tono conversacional y relajado
+
+Ejemplo: "¡Hola! ¿Cómo estás? ¿En qué puedo ayudarte?"
+"""
+                else:
+                    prompt = f"""Respond to this greeting in a friendly and natural way:
+
+User: "{user_message}"
+
+Instructions:
+- Greet back casually and friendly
+- Ask how you can help in a simple way
+- DON'T assume they have a business or startup
+- DON'T give unsolicited advice
+- Maximum 2-3 sentences
+- Keep a conversational and relaxed tone
+
+Example: "Hi there! How are you doing? What can I help you with?"
+"""
+                    
+            elif intent == "casual_chat":
+                prompt = f"""Respond to this casual message naturally:
+
+User: "{user_message}"
 {context_info}
 
-The user wants to find investors. Provide specific, actionable advice about:
-1. What stage they should be at for investor search
-2. What metrics they need to prepare
-3. Types of investors to target based on their business
-4. How to approach investors effectively
-
-Be direct, practical, and encouraging. Respond in Spanish if the user wrote in Spanish.
+Instructions:
+- Be conversational and friendly
+- Answer their question or respond to their comment naturally
+- Only mention business/startup topics if they bring them up first
+- Keep it concise and relevant
+- Match their language (Spanish/English)
 """
-            elif judge_decision.detected_intent == "search_companies":
-                prompt = f"""You are a business mentor helping entrepreneurs find B2B services and partners.
+                
+            elif intent == "personal_intro":
+                prompt = f"""The user is introducing themselves or their business:
 
-User message: "{user_message}"
+User: "{user_message}"
 {context_info}
 
-The user is looking for companies/services. Help them:
-1. Identify what type of service they really need
-2. Key criteria to evaluate providers
-3. Questions to ask potential partners
-4. Red flags to avoid
-
-Be practical and specific. Respond in Spanish if the user wrote in Spanish.
+Instructions:
+- Acknowledge their introduction warmly
+- Ask 1-2 specific follow-up questions about what they mentioned
+- Show genuine interest in learning more
+- Don't give advice yet, focus on understanding first
+- Keep it conversational, not like an interview
 """
+                
+            elif intent == "business_question":
+                prompt = f"""The user has a specific business/startup question:
+
+User: "{user_message}"
+{context_info}
+
+Instructions:
+- Address their specific question directly
+- Provide practical, actionable advice
+- Ask follow-up questions to understand their situation better
+- Be encouraging but realistic
+- Share relevant experience or frameworks when helpful
+"""
+                
+            elif intent == "search_investors":
+                prompt = f"""The user wants help finding investors:
+
+User: "{user_message}"
+{context_info}
+
+Instructions:
+- Ask about their current stage, traction, and fundraising goals
+- Provide specific advice about investor types and preparation
+- Be realistic about timing and requirements
+- Offer actionable next steps
+"""
+                
+            elif intent == "search_companies":
+                prompt = f"""The user needs help finding companies/services:
+
+User: "{user_message}"
+{context_info}
+
+Instructions:
+- Understand what type of companies/services they need
+- Ask clarifying questions about their requirements
+- Provide guidance on evaluation criteria
+- Suggest specific approaches for finding the right partners
+"""
+                
             else:
-                prompt = f"""You are a brilliant Y-Combinator mentor with deep startup experience.
+                # Default conversational response
+                prompt = f"""Respond to this message naturally and helpfully:
 
-User message: "{user_message}"
+User: "{user_message}"
 {context_info}
 
-Provide expert startup advice that is:
-- Direct and actionable
-- Based on real experience
-- Focused on execution over theory
-- Encouraging but realistic
-
-If they mention their business, ask insightful follow-up questions to understand their needs better.
-Respond in Spanish if the user wrote in Spanish, English if they wrote in English.
+Instructions:
+- Be friendly and conversational
+- Address what they're asking about specifically
+- Don't overwhelm with unsolicited advice
+- Ask relevant follow-up questions if appropriate
+- Match their communication style and language
 """
             
             # Generate response with Gemini
