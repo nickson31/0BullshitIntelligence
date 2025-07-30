@@ -198,10 +198,12 @@ class WebSocketManager:
         try:
             logger.info("Starting chat message processing", 
                        conversation_id=conversation_id,
-                       data_keys=list(data.keys()))
+                       data_keys=list(data.keys()),
+                       raw_data=data)
             
-            # Get message content
-            content = data.get("content", "").strip()
+            # Get message content (try both 'content' and 'message' fields)
+            content = data.get("content", "") or data.get("message", "")
+            content = content.strip() if content else ""
             session_id = data.get("session_id", str(uuid4()))
             
             if not content:
