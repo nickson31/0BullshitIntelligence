@@ -137,9 +137,10 @@ class WebSocketManager:
         for websocket in disconnected:
             await self.disconnect(websocket, conversation_id)
         
-        logger.debug(
+        logger.info(
             "Message broadcasted",
             conversation_id=conversation_id,
+            message_type=message.get('type', 'unknown'),
             connections_count=len(connections) - len(disconnected),
             disconnected_count=len(disconnected)
         )
@@ -422,6 +423,11 @@ Respond in Spanish if the user wrote in Spanish, English if they wrote in Englis
     
     async def send_ai_response(self, conversation_id: str, response_data: Dict[str, Any]):
         """Send AI response to connected clients"""
+        logger.info("Sending AI response", 
+                   conversation_id=conversation_id,
+                   content_length=len(response_data.get('content', '')),
+                   has_metadata=bool(response_data.get('metadata')))
+        
         message = {
             "type": "ai_response",
             "conversation_id": conversation_id,
@@ -430,6 +436,7 @@ Respond in Spanish if the user wrote in Spanish, English if they wrote in Englis
         }
         
         await self.broadcast_to_conversation(conversation_id, message)
+        logger.info("AI response sent successfully", conversation_id=conversation_id)
     
     async def send_error_message(self, conversation_id: str, error_message: str):
         """Send error message to connected clients"""
