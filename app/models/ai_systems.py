@@ -16,7 +16,7 @@ from .base import BaseModel, Language, ProjectStage, ProjectCategory, PlanType
 
 class JudgeDecision(BaseModel):
     """Judge system decision model"""
-    conversation_id: UUID
+    conversation_id: str
     user_input: str = Field(max_length=1000)
     detected_intent: str
     confidence_score: float = Field(ge=0.0, le=1.0)
@@ -38,7 +38,7 @@ class JudgeDecision(BaseModel):
 
 class LanguageDetection(BaseModel):
     """Language detection result"""
-    conversation_id: UUID
+    conversation_id: str
     text_sample: str = Field(max_length=500)
     detected_language: Language
     confidence_score: float = Field(ge=0.0, le=1.0)
@@ -54,7 +54,7 @@ class LanguageDetection(BaseModel):
 
 class AntiSpamResult(BaseModel):
     """Anti-spam analysis result"""
-    conversation_id: UUID
+    conversation_id: str
     user_input: str = Field(max_length=1000)
     spam_score: int = Field(ge=0, le=100)
     is_spam: bool = False
@@ -72,7 +72,7 @@ class AntiSpamResult(BaseModel):
 
 class UpsellOpportunity(BaseModel):
     """Upselling opportunity detection"""
-    conversation_id: UUID
+    conversation_id: str
     user_id: UUID
     current_plan: PlanType = PlanType.FREE
     suggested_plan: PlanType
@@ -92,7 +92,7 @@ class UpsellOpportunity(BaseModel):
 
 class WelcomeMessage(BaseModel):
     """Welcome message configuration"""
-    conversation_id: UUID
+    conversation_id: str
     user_id: UUID
     onboarding_stage: int = Field(ge=1, le=5)
     message_content: str = Field(max_length=2000)
@@ -111,7 +111,7 @@ class WelcomeMessage(BaseModel):
 class AISystemResponse(BaseModel):
     """Generic AI system response"""
     system_name: str
-    conversation_id: UUID
+    conversation_id: str
     processing_time_ms: float
     success: bool = True
     error_message: Optional[str] = None
@@ -127,7 +127,7 @@ class AISystemResponse(BaseModel):
 
 class ProjectDataExtraction(BaseModel):
     """Extracted project data from conversation"""
-    conversation_id: UUID
+    conversation_id: str
     user_id: UUID
     project_name: Optional[str] = None
     project_description: Optional[str] = Field(max_length=2000)
@@ -144,7 +144,7 @@ class ProjectDataExtraction(BaseModel):
 
 class LibrarianUpdate(BaseModel):
     """Librarian system update - fixed MRO issue"""
-    conversation_id: UUID
+    conversation_id: str
     project_id: UUID
     user_message: str = Field(max_length=500)  # Truncated for storage
     assistant_response: str = Field(max_length=500)  # Truncated for storage
@@ -165,7 +165,7 @@ class LibrarianUpdate(BaseModel):
 
 class ConversationContextUpdate(BaseModel):
     """Context update for conversation memory"""
-    conversation_id: UUID
+    conversation_id: str
     user_id: UUID
     context_type: str = Field(max_length=50)
     context_data: Dict[str, Any]
@@ -183,7 +183,7 @@ class ConversationContextUpdate(BaseModel):
 class AISystemMetrics(BaseModel):
     """Metrics for AI system performance"""
     system_name: str
-    conversation_id: UUID
+    conversation_id: str
     operation_type: str
     processing_time_ms: float
     memory_usage_mb: Optional[float] = None

@@ -18,7 +18,7 @@ from .search import InvestorResult, CompanyResult
 
 class ChatMessage(BaseModel, UUIDMixin, TimestampMixin):
     """Individual chat message"""
-    conversation_id: UUID
+    conversation_id: str
     role: MessageRole
     content: str = Field(min_length=1, max_length=10000)
     
@@ -147,7 +147,7 @@ class ChatResponse(BaseModel, TimestampMixin):
     """Response to a chat message"""
     # Core response
     response: str
-    conversation_id: UUID
+    conversation_id: str
     message_id: UUID
     
     # AI system results
@@ -189,7 +189,7 @@ class ChatSearchResponse(ChatResponse):
 
 class ConversationHistory(BaseModel):
     """Conversation history for context"""
-    conversation_id: UUID
+    conversation_id: str
     messages: List[ChatMessage]
     total_messages: int
     
@@ -212,7 +212,7 @@ class ConversationHistory(BaseModel):
 
 class ConversationAnalytics(BaseModel, TimestampMixin):
     """Analytics for conversation performance"""
-    conversation_id: UUID
+    conversation_id: str
     user_id: UUID
     
     # Message metrics
@@ -271,7 +271,7 @@ class WebSocketConnection(BaseModel, UUIDMixin, TimestampMixin):
 
 class TypingIndicator(BaseModel):
     """Typing indicator for real-time chat"""
-    conversation_id: UUID
+    conversation_id: str
     user_id: UUID
     is_typing: bool
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -293,7 +293,7 @@ def validate_message_content(content: str) -> str:
 
 def create_chat_message(
     content: str,
-    conversation_id: UUID,
+    conversation_id: str,
     role: MessageRole,
     user_id: Optional[UUID] = None,
     project_id: Optional[UUID] = None
