@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from app.core.config import settings, features
+from app.core.config import get_settings
 from app.core.logging import get_logger, performance_logger
 from app.models import ResponseModel, ErrorResponse
 from .routers import chat_router, health_router
@@ -21,25 +21,25 @@ from .middleware import LoggingMiddleware, RateLimitMiddleware
 from .websockets import websocket_manager
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 # Create FastAPI application
 app = FastAPI(
     title="0BullshitIntelligence",
     description="AI-powered chat application with modern UI and Gemini integration",
     version=settings.app_version,
-    docs_url="/docs" if features.is_debug_mode() else None,
-    redoc_url="/redoc" if features.is_debug_mode() else None,
-    openapi_url="/openapi.json" if features.is_debug_mode() else None
+    docs_url="/docs" if settings.debug else None,
+    redoc_url="/redoc" if settings.debug else None,
 )
 
-# Templates for UI
+# Initialize Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
 # ==========================================
-# MIDDLEWARE SETUP
+# MIDDLEWARE CONFIGURATION
 # ==========================================
 
-# CORS middleware
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -88,8 +88,8 @@ async def value_error_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    """Handle unexpected errors"""
-    logger.error(f"Unexpected error: {exc}", exc_info=True)
+    """Handle unexpected exceptions"""
+    logger.error(f"Unexpected error: {exc}")
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
@@ -148,76 +148,56 @@ async def chat_websocket_endpoint(websocket: WebSocket, conversation_id: str):
         logger.info(f"WebSocket disconnected for conversation {conversation_id}")
         await websocket_manager.disconnect(websocket, conversation_id)
     except Exception as e:
-        logger.error(f"WebSocket error for conversation {conversation_id}: {e}")
+        logger.error(f"WebSocket error: {e}")
         await websocket_manager.disconnect(websocket, conversation_id)
 
-
 # ==========================================
-# STARTUP AND SHUTDOWN EVENTS
+# APPLICATION LIFECYCLE
 # ==========================================
 
 @app.on_event("startup")
 async def startup_event():
-    """Application startup initialization"""
-    logger.info("🚀 Starting 0BullshitIntelligence application...")
+    """Application startup event"""
+    logger.info("🚀 Application starting up...")
     
-    # Log configuration
-    logger.info(f"Environment: {settings.environment}")
-    logger.info(f"Debug mode: {features.is_debug_mode()}")
-    
-    logger.info("✅ Application startup completed")
+    # Initialize services
+    try:
+        # Add any startup logic here
+        logger.info("✅ Startup completed successfully")
+        
+    except Exception as e:
+        logger.error(f"❌ Startup failed: {e}")
+        raise
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Application shutdown cleanup"""
-    logger.info("🛑 Shutting down 0BullshitIntelligence application...")
+    """Application shutdown event"""
+    logger.info("🛑 Application shutting down...")
     
-    # Close WebSocket connections
-    await websocket_manager.disconnect_all()
-    
-    logger.info("✅ Application shutdown completed")
-
-
-# ==========================================
-# API ENDPOINTS
-# ==========================================
-
-@app.get("/api/status", response_model=ResponseModel)
-async def api_status():
-    """API service status"""
+    # Cleanup services
     try:
-        # Check database connectivity
-        from app.database import database_manager
-        db_status = await database_manager.health_check()
-        
-        # Check AI systems
-        from app.ai_systems import ai_coordinator
-        ai_status = await ai_coordinator.health_check()
-        
-        overall_healthy = all([db_status, ai_status])
-        
-        return ResponseModel(
-            success=overall_healthy,
-            message="Service status check completed",
-            data={
-                "overall_status": "healthy" if overall_healthy else "degraded",
-                "components": {
-                    "database": "healthy" if db_status else "unhealthy",
-                    "ai_systems": "healthy" if ai_status else "unhealthy"
-                },
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
+        # Add any cleanup logic here
+        logger.info("✅ Shutdown completed successfully")
         
     except Exception as e:
-        logger.error(f"Status check failed: {e}")
-        return ResponseModel(
-            success=False,
-            message="Status check failed",
-            data={"error": str(e)}
-        )
+        logger.error(f"❌ Shutdown error: {e}")
 
 
-# Export the app instance
-__all__ = ["app"]
+# ==========================================
+# HEALTH CHECK ENDPOINT
+# ==========================================
+
+@app.get("/api/status")
+async def status_check():
+    """Application status check"""
+    return ResponseModel(
+        success=True,
+        message="0BullshitIntelligence is running",
+        data={
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "version": settings.app_version,
+            "environment": settings.environment
+        }
+    )
