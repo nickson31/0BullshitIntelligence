@@ -5,140 +5,112 @@ Manages environment variables, database connections, and AI configurations.
 
 import os
 from typing import Optional, List
-try:
-    from pydantic_settings import BaseSettings
-    from pydantic import field_validator, Field
-except ImportError:
-    try:
-        from pydantic import BaseSettings, field_validator, Field
-    except ImportError:
-        # Fallback for when pydantic is not available
-        class BaseSettings:
-            def __init__(self, **kwargs):
-                for key, value in kwargs.items():
-                    setattr(self, key, value)
-        
-        def field_validator(field):
-            def decorator(func):
-                return func
-            return decorator
-            
-        def Field(**kwargs):
-            return None
-from functools import lru_cache
 
 
-class Settings(BaseSettings):
+class Settings:
     """Application settings with environment variable support"""
     
-    # ==========================================
-    # APPLICATION SETTINGS
-    # ==========================================
-    app_name: str = "0BullshitIntelligence"
-    app_version: str = "1.0.0"
-    environment: str = Field(default="production", env="ENVIRONMENT")
-    debug: bool = Field(default=False, env="DEBUG")
-    
-    # Server configuration
-    host: str = Field(default="0.0.0.0", env="HOST")
-    port: int = Field(default=8000, env="PORT")
-    workers: int = 1
-    
-    # ==========================================
-    # DATABASE CONFIGURATION
-    # ==========================================
-    
-    # Supabase configuration - match Render's variable names
-    supabase_url: str = Field(env="SUPABASE_URL")
-    supabase_key: str = Field(env="SUPABASE_ANON_KEY")  # Render uses SUPABASE_ANON_KEY
-    supabase_service_key: Optional[str] = Field(default=None, env="SUPABASE_SERVICE_KEY")
-    
-    @field_validator("supabase_url")
-    @classmethod
-    def validate_supabase_url(cls, v):
-        if not v:
-            raise ValueError("Supabase URL is required - set SUPABASE_URL environment variable")
-        return v
+    def __init__(self):
+        # ==========================================
+        # APPLICATION SETTINGS
+        # ==========================================
+        self.app_name: str = "0BullshitIntelligence"
+        self.app_version: str = "1.0.0"
+        self.environment: str = os.getenv("ENVIRONMENT", "production")
+        self.debug: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes")
         
-    @field_validator("supabase_key")
-    @classmethod
-    def validate_supabase_key(cls, v):
-        if not v:
-            raise ValueError("Supabase KEY is required - set SUPABASE_ANON_KEY environment variable")
-        return v
-    
-    # ==========================================
-    # AI CONFIGURATION
-    # ==========================================
-    
-    # Google Gemini
-    gemini_api_key: str = Field(env="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-2.0-flash", env="GEMINI_MODEL")
-    gemini_temperature: float = 0.7
-    gemini_max_tokens: int = 3000
-    
-    @field_validator("gemini_api_key")
-    @classmethod
-    def validate_gemini_key(cls, v):
-        if not v:
-            raise ValueError("Gemini API key is required - set GEMINI_API_KEY environment variable")
-        return v
-    
-    # ==========================================
-    # API CONFIGURATION
-    # ==========================================
-    
-    # CORS settings
-    allowed_origins: List[str] = [
-        "https://*.onrender.com",
-        "http://localhost:3000",
-        "http://localhost:8000"
-    ]
-    
-    # Rate limiting
-    rate_limit_per_minute: int = 60
-    rate_limit_per_hour: int = 1000
-    
-    # ==========================================
-    # AI SYSTEM CONFIGURATION
-    # ==========================================
-    
-    # Language detection
-    default_language: str = "spanish"
-    supported_languages: List[str] = ["spanish", "english"]
-    
-    # ==========================================
-    # LOGGING CONFIGURATION
-    # ==========================================
-    
-    log_level: str = "INFO"
-    log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "case_sensitive": False,
-        "extra": "allow"
-    }
+        # Server configuration
+        self.host: str = os.getenv("HOST", "0.0.0.0")
+        self.port: int = int(os.getenv("PORT", "8000"))
+        self.workers: int = 1
+        
+        # ==========================================
+        # DATABASE CONFIGURATION
+        # ==========================================
+        
+        # Supabase configuration
+        self.supabase_url: str = os.getenv("SUPABASE_URL", "")
+        # Try both possible names for the Supabase key
+        self.supabase_key: str = os.getenv("SUPABASE_ANON_KEY") or os.getenv("SUPABASE_KEY", "")
+        self.supabase_service_key: Optional[str] = os.getenv("SUPABASE_SERVICE_KEY")
+        
+        # ==========================================
+        # AI CONFIGURATION
+        # ==========================================
+        
+        # Google Gemini
+        self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+        self.gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        self.gemini_temperature: float = 0.7
+        self.gemini_max_tokens: int = 3000
+        
+        # ==========================================
+        # API CONFIGURATION
+        # ==========================================
+        
+        # CORS settings
+        self.allowed_origins: List[str] = [
+            "https://*.onrender.com",
+            "http://localhost:3000",
+            "http://localhost:8000"
+        ]
+        
+        # Rate limiting
+        self.rate_limit_per_minute: int = 60
+        self.rate_limit_per_hour: int = 1000
+        
+        # ==========================================
+        # AI SYSTEM CONFIGURATION
+        # ==========================================
+        
+        # Language detection
+        self.default_language: str = "spanish"
+        self.supported_languages: List[str] = ["spanish", "english"]
+        
+        # ==========================================
+        # LOGGING CONFIGURATION
+        # ==========================================
+        
+        self.log_level: str = "INFO"
+        self.log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 
 def get_settings() -> Settings:
-    """Get settings instance - removed caching for better env var detection"""
+    """Get settings instance"""
     try:
-        return Settings()
+        settings = Settings()
+        
+        # Validate required fields
+        missing_vars = []
+        if not settings.supabase_url:
+            missing_vars.append("SUPABASE_URL")
+        if not settings.supabase_key:
+            missing_vars.append("SUPABASE_ANON_KEY (or SUPABASE_KEY)")
+        if not settings.gemini_api_key:
+            missing_vars.append("GEMINI_API_KEY")
+            
+        if missing_vars:
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+            
+        return settings
+        
     except Exception as e:
         print(f"❌ Configuration error: {e}")
         print("📋 Required environment variables:")
         print("   - SUPABASE_URL")
         print("   - SUPABASE_ANON_KEY (or SUPABASE_KEY)") 
         print("   - GEMINI_API_KEY")
-        print(f"🔍 Current environment variables: {list(os.environ.keys())}")
+        
+        # Debug info
+        available_vars = [var for var in os.environ.keys() if any(key in var for key in ['SUPABASE', 'GEMINI', 'DEBUG', 'HOST', 'PORT'])]
+        print(f"🔍 Relevant environment variables found: {available_vars}")
         raise
 
 
-# Convenient access to settings
+# Initialize settings
 try:
     settings = get_settings()
+    print("✅ Configuration loaded successfully")
 except Exception:
     # Create minimal settings for import - will fail on first use
     settings = None
