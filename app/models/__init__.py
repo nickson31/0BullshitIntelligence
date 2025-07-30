@@ -4,49 +4,49 @@ Data models and schemas for 0BullshitIntelligence microservice.
 
 from .base import *
 from .chat import *
-from .search import *
 from .user import *
 from .ai_systems import *
 
 __all__ = [
-    # Base models
+    # Base models - only include what actually exists
     "BaseModel",
-    "TimestampMixin",
-    "UUIDMixin",
-    "ResponseModel",
-    "SuccessResponse",
-    "ErrorResponse",
     
     # Chat models
     "ChatMessage",
     "ChatResponse",
-    "ChatConversation",
-    "ConversationContext",
+    "Conversation",
+    "Message",
     "ConversationCreate",
     "ConversationResponse",
     
-    # Search models
-    "SearchRequest",
-    "SearchResponse", 
-    "InvestorResult",
-    "CompanyResult",
-    "SearchFilters",
-    "InvestorSearchRequest",
-    "CompanySearchRequest", 
-    "InvestorSearchResponse",
-    "CompanySearchResponse",
-    
     # User models
     "UserProfile",
-    "UserContext",
-    "ProjectData",
-    "Project",
+    "Project", 
+    "UserRegistration",
+    "UserLogin",
+    "UserResponse",
+    "ProjectCreate",
+    "ProjectResponse",
+    "UserPlan",
+    "CreditPackage",
+    "SubscriptionPlan",
+    "CREDIT_PACKAGES",
+    "SUBSCRIPTION_PLANS",
+    "CreditCosts",
+    "UserContext",  # Temporary for backward compatibility
+    "ProjectData",  # Temporary for backward compatibility
     
     # AI Systems models
     "JudgeDecision",
-    "LanguageDetection",
+    "LanguageDetectionResult",
     "AntiSpamResult",
     "UpsellOpportunity",
     "WelcomeMessage",
     "LibrarianUpdate",
+    "ProjectDataExtraction",
+    "ConversationContextUpdate",
+    "AISystemMetrics",
+    "SystemHealthCheck",
+    "AISystemResponse",
+    "Language",
 ]

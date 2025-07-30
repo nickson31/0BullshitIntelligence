@@ -93,7 +93,7 @@ except ImportError as e:
     
     @app.get("/")
     async def error_page():
-        return {"error": "Application failed to start", "details": str(e)}
+        return {"error": "Application failed to start", "details": "Import error occurred during application startup"}
 
 
 def main():

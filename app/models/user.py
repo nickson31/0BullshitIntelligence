@@ -204,3 +204,29 @@ class CreditCosts:
     
     INVESTOR_SEARCH = 1000   # 1000 credits per investor search (15 results)
     COMPANY_SEARCH = 250     # 250 credits per company search
+
+
+# Temporary UserContext for backward compatibility
+class UserContext(BaseModel):
+    """Lightweight user context for AI systems - TEMPORARY"""
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+    plan: str = "free"
+    language: str = "spanish"
+    credits: int = 0
+    session_data: dict = {}
+
+    class Config:
+        model_config = {"from_attributes": True}
+
+
+# Temporary ProjectData for backward compatibility
+class ProjectData(BaseModel):
+    """Project data structure - TEMPORARY"""
+    categories: List[str] = []
+    stage: Optional[str] = None
+    problem_solved: Optional[str] = None
+    business_model: Optional[str] = None
+    
+    class Config:
+        model_config = {"from_attributes": True}

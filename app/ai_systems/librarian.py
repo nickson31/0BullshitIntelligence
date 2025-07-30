@@ -161,29 +161,29 @@ FUNDING (if mentioned):
 - use_of_funds: What they'll use money for
 
 Respond in this exact JSON format (only include fields with actual values):
-{
+{{
   "categories": ["category1", "category2"],
   "stage": "stage_name",
   "problem_solved": "description",
   "solution": "description",
   "target_market": "description",
   "business_model": "description",
-  "metrics": {
+  "metrics": {{
     "revenue": "amount",
-    "users": number,
+    "users": "number",
     "growth_rate": "percentage"
-  },
-  "team_info": {
-    "size": number,
+  }},
+  "team_info": {{
+    "size": "number",
     "founders": ["name1", "name2"],
     "experience": "description"
-  },
-  "funding_info": {
+  }},
+  "funding_info": {{
     "funding_stage": "stage",
     "amount_raised": "amount",
     "target_amount": "amount"
-  }
-}
+  }}
+}}
 """
         
         try:
